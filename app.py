@@ -11,6 +11,42 @@ st.set_page_config(
     page_title="Reservas Espaço - Koch Cervejaria", page_icon="🍺", layout="wide"
 )
 
+# --- CSS PERSONALIZADO PARA OTIMIZAR O CALENDÁRIO NO CELULAR ---
+st.markdown(
+    """
+    <style>
+    /* Força o calendário a ocupar 100% da largura e se adaptar a telas pequenas */
+    .fc {
+        max-width: 100% !important;
+        font-size: 0.8rem !important; /* Reduz levemente a fonte geral no mobile */
+    }
+    
+    /* Ajusta o cabeçalho do calendário (meses e botões) para não quebrar em telas estreitas */
+    .fc-toolbar {
+        flex-direction: column !important;
+        gap: 10px !important;
+        align-items: center !important;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 1.1rem !important;
+    }
+
+    /* Deixa os dias do mês com uma altura confortável para toque no celular */
+    .fc-daygrid-day-frame {
+        min-height: 70px !important;
+    }
+
+    /* Ajusta o texto dos eventos dentro dos quadradinhos do calendário */
+    .fc-event {
+        font-size: 0.7rem !important;
+        padding: 1px 3px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Arquivo JSON para salvar as reservas permanentemente no GitHub
 ARQUIVO_DADOS = "reservas.json"
 
@@ -162,7 +198,6 @@ if menu == "➕ Nova Locação":
       if not cliente.strip():
         st.warning("Por favor, preencha o nome do cliente.")
       else:
-        # Gera ID único baseado no timestamp atual para evitar duplicidade ou conflitos
         novo_id = str(int(datetime.now().timestamp()))
 
         nova_reserva = {
@@ -222,9 +257,9 @@ elif menu == "📅 Painel / Calendário":
 
   calendar_options = {
       "headerToolbar": {
-          "left": "prev,next today",
+          "left": "prev,next",
           "center": "title",
-          "right": "dayGridMonth,timeGridWeek",
+          "right": "today",
       },
       "initialView": "dayGridMonth",
       "editable": False,
@@ -417,10 +452,11 @@ elif menu == "📅 Painel / Calendário":
                   item["observacoes"] = c_obs
                   break
 
-              if salvar_no_github(reservas):
-                st.session_state[edit_key] = False
-                st.success("Alterações salvas com sucesso!")
-                st.rerun()
+exportar = salvar_no_github(reservas)
+if exportar:
+  st.session_state[edit_key] = False
+  st.success("Alterações salvas com sucesso!")
+  st.rerun()
 
           with col_cancelar:
             if st.button("❌ Cancelar", key=f"bcanc_{ev_id}"):

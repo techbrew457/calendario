@@ -287,23 +287,28 @@ calendar(
     },
     key="cal_mobile",
 )
-
 # --- LISTA RÁPIDA ABAIXO (PERFEITA PARA CONSULTA NO CELULAR) ---
 st.divider()
 st.subheader("📋 Detalhes dos Eventos")
 if eventos_filtrados:
   for ev in sorted(eventos_filtrados, key=lambda x: x["date"]):
-   sinal_status = "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
+    sinal_status = (
+        "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
+    )
     with st.expander(f"📌 {ev.get('date')} — {ev.get('cliente')}"):
       st.write(f"**Tipo:** {ev.get('tipo_evento')}")
       st.write(f"**Status:** {ev.get('status')} | **Financeiro:** {sinal_status}")
       st.write(f"**Turno:** {ev.get('turno')} ({ev.get('qtd_pessoas')} pessoas)")
       if ev.get("telefone"):
         st.write(f"**Contato:** {ev.get('telefone')}")
-        # Botão direto para abrir o WhatsApp do cliente pelo celular
-        st.markdown(
-            f"[💬 Chamar no WhatsApp](https://wa.me/55{ev.get('telefone').replace(' ', '').replace('-', '')})"
+        tel_limpo = (
+            ev.get("telefone")
+            .replace(" ", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
         )
+        st.markdown(f"[💬 Chamar no WhatsApp](https://wa.me/55{tel_limpo})")
       if ev.get("qtd_chopp", 0) > 0:
         st.write(
             f"**Chopp:** {ev.get('qtd_chopp')}L ({ev.get('estilo_chopp')})"

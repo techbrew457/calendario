@@ -30,5 +30,19 @@
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
         "observacoes": ""
+    },
+    {
+        "id": "3",
+        "cliente": "BRUNA ",
+        "telefone": "999564316",
+        "tipo_evento": "Aniversário",
+        "date": "2026-11-21",
+        "turno": "Dia Inteiro",
+        "qtd_pessoas": 60,
+        "status": "Pendente",
+        "sinal_pago": false,
+        "qtd_chopp": 0,
+        "estilo_chopp": "Bohemian Pilsener",
+        "observacoes": ""
     }
 ]

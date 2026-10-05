@@ -2,19 +2,19 @@
     {
         "id": "1",
         "title": "[Locado] Jaíne - Aniversário (Sinal Pendente)",
-        "date": "2026-10-05",
+        "date": "2026-11-05",
         "backgroundColor": "#FF4B4B",
         "borderColor": "#FF4B4B",
         "textColor": "#ffffff",
         "cliente": "Jaíne",
         "telefone": "99919-0933",
         "tipo_evento": "Aniversário",
-        "status": "Locado",
-        "turno": "Dia Inteiro (08h às 22h)",
+        "status": "Confirmado",
+        "turno": "Dia Inteiro",
         "qtd_pessoas": 100,
         "sinal_pago": false,
         "qtd_chopp": 0,
-        "estilo_chopp": "",
+        "estilo_chopp": "Bohemian Pilsener",
         "observacoes": ""
     }
 ]

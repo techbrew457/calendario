@@ -44,5 +44,19 @@
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
         "observacoes": ""
+    },
+    {
+        "id": "1791230027",
+        "cliente": "EDILAINE LEVANDOWSKI",
+        "telefone": "42988656160",
+        "tipo_evento": "Aniversário",
+        "date": "2026-12-26",
+        "turno": "Dia Inteiro",
+        "qtd_pessoas": 60,
+        "status": "Pendente",
+        "sinal_pago": false,
+        "qtd_chopp": 0,
+        "estilo_chopp": "Bohemian Pilsener",
+        "observacoes": ""
     }
 ]

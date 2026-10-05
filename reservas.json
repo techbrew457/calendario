@@ -1,0 +1,20 @@
+[
+    {
+        "id": "1",
+        "title": "[Locado] jaine - Aniversário (Sinal Pendente)",
+        "date": "2026-10-05",
+        "backgroundColor": "#FF4B4B",
+        "borderColor": "#FF4B4B",
+        "textColor": "#ffffff",
+        "cliente": "jaine",
+        "telefone": "",
+        "tipo_evento": "Aniversário",
+        "status": "Locado",
+        "turno": "Dia Inteiro (08h às 22h)",
+        "qtd_pessoas": 100,
+        "sinal_pago": false,
+        "qtd_chopp": 0,
+        "estilo_chopp": "",
+        "observacoes": ""
+    }
+]

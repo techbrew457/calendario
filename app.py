@@ -8,7 +8,7 @@ from streamlit_calendar import calendar
 
 # Configuração da página para ocupar a tela inteira (ótimo para celular)
 st.set_page_config(
-    page_title="Agenda - Salão de Festas", page_icon="📅", layout="wide"
+    page_title="Reservas Espaço - Koch Cervejaria", page_icon="🍺", layout="wide"
 )
 
 # Arquivo JSON para salvar as reservas permanentemente no GitHub
@@ -71,35 +71,50 @@ def salvar_no_github(reservas):
 # Carrega as reservas da nuvem
 reservas, _ = carregar_reservas()
 
-st.title("🎉 Gerenciamento de Locações - Salão de Festas")
+# --- MENU LATERAL: LOGO, TÍTULO E NAVEGAÇÃO ---
+with st.sidebar:
+  if os.path.exists("logo.png"):
+    st.image("logo.png", use_container_width=True)
+  
+  st.title("Reservas Espaço")
+  st.divider()
+  
+  menu = st.radio(
+      "Navegação", ["📅 Painel / Calendário", "➕ Nova Locação"]
+  )
 
-# --- MENU LATERAL: CADASTRO E FILTROS ---
-st.sidebar.header("⚙️ Opções & Cadastro")
-menu = st.sidebar.radio(
-    "Navegação", ["📅 Painel / Calendário", "➕ Nova Locação"]
-)
+  st.divider()
+  st.subheader("🔍 Filtros")
+  filtro_mes = st.sidebar.selectbox(
+      "Filtrar por Mês (Opcional)",
+      [
+          "Todos",
+          "01",
+          "02",
+          "03",
+          "04",
+          "05",
+          "06",
+          "07",
+          "08",
+          "09",
+          "10",
+          "11",
+          "12",
+      ],
+  )
 
-# Filtros rápidos na barra lateral
-st.sidebar.divider()
-st.sidebar.subheader("🔍 Filtros")
-filtro_mes = st.sidebar.selectbox(
-    "Filtrar por Mês (Opcional)",
-    [
-        "Todos",
-        "01",
-        "02",
-        "03",
-        "04",
-        "05",
-        "06",
-        "07",
-        "08",
-        "09",
-        "10",
-        "11",
-        "12",
-    ],
-)
+st.title("🍻 Reservas Espaço - Koch Cervejaria")
+
+# Lista oficial de estilos de chopp da cervejaria
+ESTILOS_CHOPP = [
+    "Bohemian Pilsener",
+    "Premium Golden",
+    "APA",
+    "Vinho",
+    "Red Ale",
+    "Nenhum",
+]
 
 # Filtragem de eventos
 eventos_filtrados = reservas
@@ -138,9 +153,7 @@ if menu == "➕ Nova Locação":
           "Volume de Chopp (Litros)", min_value=0, value=0, step=10
       )
     with col4:
-      estilo_chopp = st.selectbox(
-          "Estilo do Chopp", ["Pilsen", "IPA", "Stout", "Weiss", "Nenhum"]
-      )
+      estilo_chopp = st.selectbox("Estilo do Chopp", ESTILOS_CHOPP)
 
     observacoes = st.text_area("Observações Gerais")
 
@@ -150,7 +163,6 @@ if menu == "➕ Nova Locação":
         st.warning("Por favor, preencha o nome do cliente.")
       else:
         novo_id = str(len(reservas) + 1)
-        # Evitar ID duplicado se houver exclusões anteriores
         while any(r.get("id") == novo_id for r in reservas):
           novo_id = str(int(novo_id) + 1)
 
@@ -174,18 +186,33 @@ if menu == "➕ Nova Locação":
           st.rerun()
 
 elif menu == "📅 Painel / Calendário":
-  # --- MONTAGEM DO CALENDAR COM ÍCONES DE STATUS ---
+  # --- MONTAGEM DO CALENDÁRIO COM DETALHES VISÍVEIS NO DIA ---
   calendar_events = []
-  for ev in reservas:
-    # Definindo cor ou ícone pelo status e sinal
-    sinal_txt = "✅" if ev.get("sinal_pago") else "⏳"
-    titulo_cal = (
-        f"{sinal_txt} {ev.get('cliente')} ({ev.get('tipo_evento')})"
+  for ev in eventos_filtrados:  # Respeita o filtro de mês do menu lateral
+    # Ícones de Status e Sinal
+    status_ev = ev.get("status", "Pendente")
+    if status_ev == "Confirmado":
+      icone_status = "✅"
+      cor_fundo = "#28a745"  # Verde
+    elif status_ev == "Cancelado":
+      icone_status = "❌"
+      cor_fundo = "#dc3545"  # Vermelho
+    else:
+      icone_status = "⏳"
+      cor_fundo = "#ffc107"  # Amarelo/Laranja
+
+    sinal_txt = "Sinal OK" if ev.get("sinal_pago") else "Sinal Pendente"
+    chopp_txt = (
+        f" | 🍺 {ev.get('qtd_chopp')}L {ev.get('estilo_chopp')}"
+        if ev.get("qtd_chopp", 0) > 0
+        else ""
     )
 
-    cor_fundo = "#28a745" if ev.get("status") == "Confirmado" else "#ffc107"
-    if ev.get("status") == "Cancelado":
-      cor_fundo = "#dc3545"
+    # Texto detalhado que vai aparecer diretamente no quadradinho do dia no calendário
+    titulo_cal = (
+        f"{icone_status} {ev.get('cliente')} ({ev.get('tipo_evento')})"
+        f" - {ev.get('turno')} | {ev.get('qtd_pessoas')} pes. ({sinal_txt}){chopp_txt}"
+    )
 
     calendar_events.append({
         "title": titulo_cal,
@@ -212,7 +239,7 @@ elif menu == "📅 Painel / Calendário":
       events=calendar_events, options=calendar_options, key="calendar_salao"
   )
 
-  # --- LISTA RÁPIDA E EDIÇÃO DE EVENTOS ABAIXO DO CALENDÁRIO ---
+  # --- LISTA RÁPIDA E EDIÇÃO DIRETA ---
   st.divider()
   st.subheader("📋 Gerenciar Eventos & Detalhes")
 
@@ -221,17 +248,17 @@ elif menu == "📅 Painel / Calendário":
       sinal_status = (
           "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
       )
+      ev_id = ev.get("id")
 
       with st.expander(
           f"📌 {ev.get('date')} — {ev.get('cliente')} ({ev.get('tipo_evento')})"
       ):
-        # Se o usuário clicou para editar este evento específico
-        edit_key = f"edit_mode_{ev.get('id')}"
+        edit_key = f"edit_active_{ev_id}"
         if edit_key not in st.session_state:
           st.session_state[edit_key] = False
 
         if not st.session_state[edit_key]:
-          # Modo de Visualização Normal
+          # Modo Visualização
           st.write(f"**Tipo:** {ev.get('tipo_evento')}")
           st.write(
               f"**Status:** {ev.get('status')} | **Financeiro:**"
@@ -262,113 +289,123 @@ elif menu == "📅 Painel / Calendário":
 
           col_b1, col_b2 = st.columns(2)
           with col_b1:
-            if st.button("✏️ Editar Dados", key=f"btn_edit_{ev.get('id')}"):
+            if st.button("✏️ Editar Dados", key=f"btn_edit_{ev_id}"):
               st.session_state[edit_key] = True
               st.rerun()
           with col_b2:
-            if st.button(
-                "🗑️ Excluir Evento", key=f"btn_del_{ev.get('id')}"
-            ):
-              reservas = [r for r in reservas if r.get("id") != ev.get("id")]
+            if st.button("🗑️ Excluir Evento", key=f"btn_del_{ev_id}"):
+              reservas = [r for r in reservas if r.get("id") != ev_id]
               if salvar_no_github(reservas):
                 st.success("Evento excluído com sucesso!")
                 st.rerun()
 
         else:
-          # Modo de Edição Completa
+          # Modo Edição Direta
           st.markdown("### ✍️ Editando Locação")
-          with st.form(key=f"form_edit_{ev.get('id')}"):
-            c_cli = st.text_input(
-                "Nome do Cliente", value=ev.get("cliente", "")
-            )
-            c_tel = st.text_input(
-                "Telefone / WhatsApp", value=ev.get("telefone", "")
-            )
 
-            tipos_lista = [
-                "Aniversário",
-                "Casamento",
-                "Confraternização",
-                "Infantil",
-                "Outros",
-            ]
-            idx_tipo = (
-                tipos_lista.index(ev.get("tipo_evento"))
-                if ev.get("tipo_evento") in tipos_lista
-                else 0
-            )
-            c_tipo = st.selectbox(
-                "Tipo de Evento", tipos_lista, index=idx_tipo
-            )
+          c_cli = st.text_input(
+              "Nome do Cliente", value=ev.get("cliente", ""), key=f"ec_{ev_id}"
+          )
+          c_tel = st.text_input(
+              "Telefone / WhatsApp",
+              value=ev.get("telefone", ""),
+              key=f"et_{ev_id}",
+          )
 
-            try:
-              data_obj = datetime.strptime(
-                  ev.get("date", "2026-01-01"), "%Y-%m-%d"
-              ).date()
-            except:
-              data_obj = datetime.now().date()
-            c_data = st.date_input("Data da Locação", value=data_obj)
+          tipos_lista = [
+              "Aniversário",
+              "Casamento",
+              "Confraternização",
+              "Infantil",
+              "Outros",
+          ]
+          idx_tipo = (
+              tipos_lista.index(ev.get("tipo_evento"))
+              if ev.get("tipo_evento") in tipos_lista
+              else 0
+          )
+          c_tipo = st.selectbox(
+              "Tipo de Evento", tipos_lista, index=idx_tipo, key=f"etip_{ev_id}"
+          )
 
-            turnos_lista = ["Manhã", "Tarde", "Noite", "Dia Inteiro"]
-            idx_turno = (
-                turnos_lista.index(ev.get("turno"))
-                if ev.get("turno") in turnos_lista
-                else 0
-            )
-            c_turno = st.selectbox("Turno", turnos_lista, index=idx_turno)
+          try:
+            data_obj = datetime.strptime(
+                ev.get("date", "2026-01-01"), "%Y-%m-%d"
+            ).date()
+          except:
+            data_obj = datetime.now().date()
+          c_data = st.date_input(
+              "Data da Locação", value=data_obj, key=f"edat_{ev_id}"
+          )
 
-            c_pess = st.number_input(
-                "Headcount (Qtd de Pessoas)",
-                min_value=1,
-                value=int(ev.get("qtd_pessoas", 50)),
-                step=1,
-            )
+          turnos_lista = ["Manhã", "Tarde", "Noite", "Dia Inteiro"]
+          idx_turno = (
+              turnos_lista.index(ev.get("turno"))
+              if ev.get("turno") in turnos_lista
+              else 0
+          )
+          c_turno = st.selectbox(
+              "Turno", turnos_lista, index=idx_turno, key=f"etur_{ev_id}"
+          )
 
-            status_lista = ["Confirmado", "Pendente", "Cancelado"]
-            idx_status = (
-                status_lista.index(ev.get("status"))
-                if ev.get("status") in status_lista
-                else 0
-            )
-            c_status = st.selectbox(
-                "Status da Locação", status_lista, index=idx_status
-            )
+          c_pess = st.number_input(
+              "Headcount (Qtd de Pessoas)",
+              min_value=1,
+              value=int(ev.get("qtd_pessoas", 50)),
+              step=1,
+              key=f"epes_{ev_id}",
+          )
 
-            c_sinal = st.checkbox(
-                "50% de Sinal Pago?", value=bool(ev.get("sinal_pago", False))
-            )
+          status_lista = ["Confirmado", "Pendente", "Cancelado"]
+          idx_status = (
+              status_lista.index(ev.get("status"))
+              if ev.get("status") in status_lista
+              else 0
+          )
+          c_status = st.selectbox(
+              "Status da Locação",
+              status_lista,
+              index=idx_status,
+              key=f"esta_{ev_id}",
+          )
 
-            c_chopp = st.number_input(
-                "Volume de Chopp (Litros)",
-                min_value=0,
-                value=int(ev.get("qtd_chopp", 0)),
-                step=10,
-            )
+          c_sinal = st.checkbox(
+              "50% de Sinal Pago?",
+              value=bool(ev.get("sinal_pago", False)),
+              key=f"esin_{ev_id}",
+          )
 
-            estilos_lista = ["Pilsen", "IPA", "Stout", "Weiss", "Nenhum"]
-            idx_estilo = (
-                estilos_lista.index(ev.get("estilo_chopp"))
-                if ev.get("estilo_chopp") in estilos_lista
-                else 0
-            )
-            c_estilo = st.selectbox(
-                "Estilo do Chopp", estilos_lista, index=idx_estilo
-            )
+          c_chopp = st.number_input(
+              "Volume de Chopp (Litros)",
+              min_value=0,
+              value=int(ev.get("qtd_chopp", 0)),
+              step=10,
+              key=f"echo_{ev_id}",
+          )
 
-            c_obs = st.text_area(
-                "Observações Gerais", value=ev.get("observacoes", "")
-            )
+          idx_estilo = (
+              ESTILOS_CHOPP.index(ev.get("estilo_chopp"))
+              if ev.get("estilo_chopp") in ESTILOS_CHOPP
+              else 0
+          )
+          c_estilo = st.selectbox(
+              "Estilo do Chopp",
+              ESTILOS_CHOPP,
+              index=idx_estilo,
+              key=f"eest_{ev_id}",
+          )
 
-            col_salvar, col_cancelar = st.columns(2)
-            with col_salvar:
-              salvar_edicao = st.form_submit_button("💾 Salvar Alterações")
-            with col_cancelar:
-              cancelar_edicao = st.form_submit_button("❌ Cancelar")
+          c_obs = st.text_area(
+              "Observações Gerais",
+              value=ev.get("observacoes", ""),
+              key=f"eobs_{ev_id}",
+          )
 
-            if salvar_edicao:
-              # Atualiza os dados na lista
+          col_salvar, col_cancelar = st.columns(2)
+          with col_salvar:
+            if st.button("💾 Salvar Alterações", key=f"bsav_{ev_id}"):
               for item in reservas:
-                if item.get("id") == ev.get("id"):
+                if item.get("id") == ev_id:
                   item["cliente"] = c_cli
                   item["telefone"] = c_tel
                   item["tipo_evento"] = c_tipo
@@ -387,7 +424,8 @@ elif menu == "📅 Painel / Calendário":
                 st.success("Alterações salvas com sucesso!")
                 st.rerun()
 
-            if cancelar_edicao:
+          with col_cancelar:
+            if st.button("❌ Cancelar", key=f"bcanc_{ev_id}"):
               st.session_state[edit_key] = False
               st.rerun()
   else:

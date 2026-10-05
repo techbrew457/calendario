@@ -285,4 +285,93 @@ elif menu == "📅 Painel / Calendário":
       icone_status = "⏳ [Em Negociação]"
       cor_fundo = "#ffc107"  # Amarelo/Laranja
 
-    sinal_txt
+    sinal_txt = "Sinal OK" if ev.get("sinal_pago") else "Sinal Pendente"
+    
+    chopp_qtd = ev.get('qtd_chopp', 0)
+    chopp_txt = f" | 🍺 {chopp_qtd}L {ev.get('estilo_chopp')}" if chopp_qtd > 0 else ""
+
+    tipo_ev_str = f" ({ev.get('tipo_evento')})" if ev.get('tipo_evento') else ""
+    data_exibicao_cal = formatar_data_br(ev.get("date"))
+    titulo_cal = (
+        f"[{data_exibicao_cal}] {icone_status} {ev.get('cliente')}{tipo_ev_str}"
+        f" - {ev.get('turno')} | {ev.get('qtd_pessoas')} pes. ({sinal_txt}){chopp_txt}"
+    )
+
+    calendar_events.append({
+        "title": titulo_cal,
+        "start": ev.get("date"),
+        "allDay": True,
+        "backgroundColor": cor_fundo,
+        "borderColor": cor_fundo,
+    })
+
+  calendar_options = {
+      "headerToolbar": {
+          "left": "prev,next",
+          "center": "title",
+          "right": "today",
+      },
+      "initialView": "dayGridMonth",
+      "editable": False,
+      "selectable": True,
+      "locale": "pt-br",
+  }
+
+  st.subheader("📆 Calendário de Locações")
+  calendar(
+      events=calendar_events, options=calendar_options, key="calendar_salao"
+  )
+
+  # --- GERENCIAMENTO OTIMIZADO E LIMPO ---
+  st.divider()
+  st.subheader("📋 Gerenciamento e Lista de Locações")
+
+  if eventos_filtrados:
+    # Filtro específico para o gerenciamento para evitar poluição visual
+    col_f1, col_f2 = st.columns([2, 2])
+    with col_f1:
+      filtro_status_ger = st.selectbox(
+          "Filtrar por Status nesta Lista",
+          ["Todos", "Confirmado", "Pendente", "Cancelado"]
+      )
+    with col_f2:
+      busca_cliente = st.text_input("🔍 Buscar por nome do cliente", "")
+
+    # Aplicação dos filtros da aba de gerenciamento
+    lista_gerenciar = eventos_filtrados
+    if filtro_status_ger != "Todos":
+      lista_gerenciar = [e for e in lista_gerenciar if e.get("status") == filtro_status_ger]
+    if busca_cliente.strip():
+      lista_gerenciar = [e for e in lista_gerenciar if busca_cliente.lower() in e.get("cliente", "").lower()]
+
+    eventos_ordenados = sorted(lista_gerenciar, key=lambda x: x["date"])
+
+    if not eventos_ordenados:
+      st.info("Nenhum evento encontrado com os filtros aplicados.")
+    else:
+      st.write(f"Mostrando **{len(eventos_ordenados)}** registro(s):")
+      
+      for ev in eventos_ordenados:
+        ev_id = ev.get("id")
+        status_ev = ev.get("status", "Pendente")
+        emoji_status = "✅" if status_ev == "Confirmado" else ("❌" if status_ev == "Cancelado" else "⏳")
+        data_br = formatar_data_br(ev.get('date'))
+        sinal_txt = "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
+        tipo_ev_lbl = f" ({ev.get('tipo_evento')})" if ev.get('tipo_evento') else ""
+
+        # Caixa compacta e limpa para cada evento
+        with st.container(border=True):
+          col_info, col_botoes = st.columns([3, 1])
+          
+          with col_info:
+            st.markdown(f"**{emoji_status} {data_br} - {ev.get('cliente')}**{tipo_ev_lbl}")
+            st.caption(f"Turno: **{ev.get('turno')}** | Pessoas: **{ev.get('qtd_pessoas')}** | Status: **{status_ev}** | {sinal_txt}")
+            
+            v_loc = ev.get("valor_locacao", 0.0)
+            v_sin = ev.get("valor_sinal", 0.0)
+            st.text(f"Locação: R$ {v_loc:,.2f} | Sinal (50%): R$ {v_sin:,.2f}")
+
+          with col_botoes:
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+            # Botões de ação rápida limpos
+            btn_detalhes = st.button("👁️ Detalhes / Editar", key

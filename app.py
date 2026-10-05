@@ -195,7 +195,34 @@ if menu == "➕ Nova Locação":
       sinal_pago = st.checkbox("50% de Sinal Pago?")
 
     st.divider()
-    st.subheader("🍺 Opcionais & Observações")
+    st.subheader("💰 Valores e Custos")
+    col_v1, col_v2, col_v3 = st.columns(3)
+    with col_v1:
+      valor_locacao = st.number_input(
+          "Valor da Locação (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f"
+      )
+    with col_v2:
+      sugerido_sinal = valor_locacao / 2.0
+      valor_sinal = st.number_input(
+          "Valor do Sinal - 50% (R$)", min_value=0.0, value=sugerido_sinal, step=50.0, format="%.2f"
+      )
+    with col_v3:
+      valor_caucao = st.number_input(
+          "Valor da Caução (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f"
+      )
+
+    col_v4, col_v5 = st.columns(2)
+    with col_v4:
+      taxa_extra = st.number_input(
+          "Taxa Extra (R$)", min_value=0.0, value=0.0, step=10.0, format="%.2f"
+      )
+    with col_v5:
+      aluguel_som = st.number_input(
+          "Aluguel de Som (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f"
+      )
+
+    st.divider()
+    st.subheader("🍺 Opcionais de Chopp & Observações")
     col3, col4 = st.columns(2)
     with col3:
       qtd_chopp = st.number_input(
@@ -223,6 +250,11 @@ if menu == "➕ Nova Locação":
             "qtd_pessoas": int(qtd_pessoas),
             "status": status,
             "sinal_pago": sinal_pago,
+            "valor_locacao": float(valor_locacao),
+            "valor_sinal": float(valor_sinal),
+            "valor_caucao": float(valor_caucao),
+            "taxa_extra": float(taxa_extra),
+            "aluguel_som": float(aluguel_som),
             "qtd_chopp": int(qtd_chopp),
             "estilo_chopp": estilo_chopp,
             "observacoes": observacoes,
@@ -317,6 +349,17 @@ elif menu == "📅 Painel / Calendário":
             st.write(f"**Tipo de Evento:** {ev.get('tipo_evento')}")
             st.write(f"**Status:** {status_ev} | **Financeiro:** {sinal_status}")
             st.write(f"**Turno:** {ev.get('turno')} | **Pessoas:** {ev.get('qtd_pessoas')}")
+            
+            # Exibe valores financeiros
+            v_loc = ev.get("valor_locacao", 0.0)
+            v_sin = ev.get("valor_sinal", 0.0)
+            v_cau = ev.get("valor_caucao", 0.0)
+            t_ext = ev.get("taxa_extra", 0.0)
+            v_som = ev.get("aluguel_som", 0.0)
+            
+            st.write(f"**Locação:** R$ {v_loc:,.2f} | **Sinal:** R$ {v_sin:,.2f}")
+            st.write(f"**Caução:** R$ {v_cau:,.2f} | **Taxa Extra:** R$ {t_ext:,.2f} | **Som:** R$ {v_som:,.2f}")
+
           with col_info2:
             if ev.get("telefone"):
               st.write(f"**Contato:** {ev.get('telefone')}")
@@ -423,6 +466,51 @@ elif menu == "📅 Painel / Calendário":
               key=f"esin_{ev_id}",
           )
 
+          c_vloc = st.number_input(
+              "Valor da Locação (R$)",
+              min_value=0.0,
+              value=float(ev.get("valor_locacao", 0.0)),
+              step=50.0,
+              format="%.2f",
+              key=f"evloc_{ev_id}",
+          )
+
+          c_vsin = st.number_input(
+              "Valor do Sinal - 50% (R$)",
+              min_value=0.0,
+              value=float(ev.get("valor_sinal", 0.0)),
+              step=50.0,
+              format="%.2f",
+              key=f"evsin_{ev_id}",
+          )
+
+          c_vcau = st.number_input(
+              "Valor da Caução (R$)",
+              min_value=0.0,
+              value=float(ev.get("valor_caucao", 0.0)),
+              step=50.0,
+              format="%.2f",
+              key=f"evcau_{ev_id}",
+          )
+
+          c_text = st.number_input(
+              "Taxa Extra (R$)",
+              min_value=0.0,
+              value=float(ev.get("taxa_extra", 0.0)),
+              step=10.0,
+              format="%.2f",
+              key=f"evtex_{ev_id}",
+          )
+
+          c_som = st.number_input(
+              "Aluguel de Som (R$)",
+              min_value=0.0,
+              value=float(ev.get("aluguel_som", 0.0)),
+              step=50.0,
+              format="%.2f",
+              key=f"evsom_{ev_id}",
+          )
+
           c_chopp = st.number_input(
               "Volume de Chopp (Litros)",
               min_value=0,
@@ -462,6 +550,11 @@ elif menu == "📅 Painel / Calendário":
                   item["qtd_pessoas"] = int(c_pess)
                   item["status"] = c_status
                   item["sinal_pago"] = c_sinal
+                  item["valor_locacao"] = float(c_vloc)
+                  item["valor_sinal"] = float(c_vsin)
+                  item["valor_caucao"] = float(c_vcau)
+                  item["taxa_extra"] = float(c_text)
+                  item["aluguel_som"] = float(c_som)
                   item["qtd_chopp"] = int(c_chopp)
                   item["estilo_chopp"] = c_estilo
                   item["observacoes"] = c_obs

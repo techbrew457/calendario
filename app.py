@@ -186,19 +186,19 @@ if menu == "➕ Nova Locação":
           st.rerun()
 
 elif menu == "📅 Painel / Calendário":
-  # --- MONTAGEM DO CALENDÁRIO COM DETALHES VISÍVEIS NO DIA ---
+  # --- MONTAGEM DO CALENDÁRIO COM ÍCONES DE STATUS EM TODOS OS DIAS ---
   calendar_events = []
-  for ev in eventos_filtrados:  # Respeita o filtro de mês do menu lateral
-    # Ícones de Status e Sinal
+  for ev in eventos_filtrados:
     status_ev = ev.get("status", "Pendente")
+    
     if status_ev == "Confirmado":
-      icone_status = "✅"
+      icone_status = "✅ [Locado]"
       cor_fundo = "#28a745"  # Verde
     elif status_ev == "Cancelado":
-      icone_status = "❌"
+      icone_status = "❌ [Cancelado]"
       cor_fundo = "#dc3545"  # Vermelho
     else:
-      icone_status = "⏳"
+      icone_status = "⏳ [Em Negociação]"
       cor_fundo = "#ffc107"  # Amarelo/Laranja
 
     sinal_txt = "Sinal OK" if ev.get("sinal_pago") else "Sinal Pendente"
@@ -208,7 +208,6 @@ elif menu == "📅 Painel / Calendário":
         else ""
     )
 
-    # Texto detalhado que vai aparecer diretamente no quadradinho do dia no calendário
     titulo_cal = (
         f"{icone_status} {ev.get('cliente')} ({ev.get('tipo_evento')})"
         f" - {ev.get('turno')} | {ev.get('qtd_pessoas')} pes. ({sinal_txt}){chopp_txt}"
@@ -239,57 +238,59 @@ elif menu == "📅 Painel / Calendário":
       events=calendar_events, options=calendar_options, key="calendar_salao"
   )
 
-  # --- LISTA RÁPIDA E EDIÇÃO DIRETA ---
+  # --- GERENCIAMENTO E EDIÇÃO RÁPIDA POR DATA ---
   st.divider()
-  st.subheader("📋 Gerenciar Eventos & Detalhes")
+  st.subheader("📋 Gerenciar e Editar Dias Agendados")
 
   if eventos_filtrados:
-    for ev in sorted(eventos_filtrados, key=lambda x: x["date"]):
+    # Ordena os eventos por data
+    eventos_ordenados = sorted(eventos_filtrados, key=lambda x: x["date"])
+    
+    for ev in eventos_ordenados:
       sinal_status = (
           "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
       )
       ev_id = ev.get("id")
+      status_ev = ev.get("status", "Pendente")
+      
+      # Emoji indicador rápido no título do expander
+      emoji_status = "✅" if status_ev == "Confirmado" else ("❌" if status_ev == "Cancelado" else "⏳")
 
       with st.expander(
-          f"📌 {ev.get('date')} — {ev.get('cliente')} ({ev.get('tipo_evento')})"
+          f"{emoji_status} Data: {ev.get('date')} | Cliente: {ev.get('cliente')} ({ev.get('tipo_evento')})"
       ):
         edit_key = f"edit_active_{ev_id}"
         if edit_key not in st.session_state:
           st.session_state[edit_key] = False
 
         if not st.session_state[edit_key]:
-          # Modo Visualização
-          st.write(f"**Tipo:** {ev.get('tipo_evento')}")
-          st.write(
-              f"**Status:** {ev.get('status')} | **Financeiro:**"
-              f" {sinal_status}"
-          )
-          st.write(
-              f"**Turno:** {ev.get('turno')} | **Headcount:**"
-              f" {ev.get('qtd_pessoas')} pessoas"
-          )
-          if ev.get("telefone"):
-            st.write(f"**Contato:** {ev.get('telefone')}")
-            tel_limpo = (
-                ev.get("telefone")
-                .replace(" ", "")
-                .replace("-", "")
-                .replace("(", "")
-                .replace(")", "")
-            )
-            st.markdown(
-                f"[💬 Chamar no WhatsApp](https://wa.me/55{tel_limpo})"
-            )
-          if ev.get("qtd_chopp", 0) > 0:
-            st.write(
-                f"**Chopp:** {ev.get('qtd_chopp')}L ({ev.get('estilo_chopp')})"
-            )
+          # Modo Visualização Detalhada
+          col_info1, col_info2 = st.columns(2)
+          with col_info1:
+            st.write(f"**Tipo de Evento:** {ev.get('tipo_evento')}")
+            st.write(f"**Status:** {status_ev} | **Financeiro:** {sinal_status}")
+            st.write(f"**Turno:** {ev.get('turno')} | **Pessoas:** {ev.get('qtd_pessoas')}")
+          with col_info2:
+            if ev.get("telefone"):
+              st.write(f"**Contato:** {ev.get('telefone')}")
+              tel_limpo = (
+                  ev.get("telefone")
+                  .replace(" ", "")
+                  .replace("-", "")
+                  .replace("(", "")
+                  .replace(")", "")
+              )
+              st.markdown(f"[💬 Chamar no WhatsApp](https://wa.me/55{tel_limpo})")
+            if ev.get("qtd_chopp", 0) > 0:
+              st.write(f"**Chopp:** {ev.get('qtd_chopp')}L ({ev.get('estilo_chopp')})")
+
           if ev.get("observacoes"):
             st.write(f"**Obs:** {ev.get('observacoes')}")
 
+          st.markdown("")
           col_b1, col_b2 = st.columns(2)
           with col_b1:
-            if st.button("✏️ Editar Dados", key=f"btn_edit_{ev_id}"):
+            if st.button("✏️ Editar Dados deste Dia", key=f"btn_edit_{ev_id}"):
               st.session_state[edit_key] = True
               st.rerun()
           with col_b2:

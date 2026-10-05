@@ -23,15 +23,44 @@ HEADERS = {
     "Accept": "application/vnd.github.v3+json",
 }
 
-
 def carregar_reservas():
   url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{ARQUIVO_CAMINHO}"
   response = requests.get(url, headers=HEADERS)
   if response.status_code == 200:
-    conteudo_base64 = response.json()["content"]
+    dados_resp = response.json()
+    conteudo_base64 = dados_resp["content"]
     conteudo_bytes = base64.b64decode(conteudo_base64)
-    return json.loads(conteudo_bytes.decode("utf-8")), response.json()["sha"]
+    return json.loads(conteudo_bytes.decode("utf-8")), dados_resp["sha"]
   return [], None
+
+
+def salvar_no_github(reservas):
+  url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{ARQUIVO_CAMINHO}"
+  _, sha = carregar_reservas()
+
+  novo_conteudo = json.dumps(reservas, ensure_ascii=False, indent=4)
+  conteudo_base64 = base64.b64encode(novo_conteudo.encode("utf-8")).decode(
+      "utf-8"
+  )
+
+  dados = {
+      "message": "Atualização de reservas via app do salão",
+      "content": conteudo_base64,
+  }
+  if sha:
+    dados["sha"] = sha
+
+  response = requests.put(url, headers=HEADERS, json=dados)
+
+  # Se der erro, vamos imprimir o motivo exato na tela para sabermos o que aconteceu
+  if response.status_code not in [200, 201]:
+    st.error(
+        f"Erro do GitHub ({response.status_code}):"
+        f" {response.json().get('message', 'Erro desconhecido')}"
+    )
+    return False
+
+  return True
 
 
 def salvar_no_github(reservas):

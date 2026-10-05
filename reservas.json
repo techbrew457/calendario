@@ -16,5 +16,19 @@
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
         "observacoes": ""
+    },
+    {
+        "id": "2",
+        "cliente": "FRED",
+        "telefone": "42 999661503",
+        "tipo_evento": "Aniversário",
+        "date": "2026-11-28",
+        "turno": "Dia Inteiro",
+        "qtd_pessoas": 50,
+        "status": "Confirmado",
+        "sinal_pago": false,
+        "qtd_chopp": 0,
+        "estilo_chopp": "Bohemian Pilsener",
+        "observacoes": ""
     }
 ]

@@ -183,4 +183,298 @@ if menu == "➕ Nova Locação":
           "Tipo de Evento",
           ["Aniversário", "Casamento", "Confraternização", "Infantil", "Outros"],
       )
-      data_evento =
+      data_evento = st.date_input("Data da Locação")
+    with col2:
+      turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite", "Dia Inteiro"])
+      qtd_pessoas = st.number_input(
+          "Headcount (Qtd de Pessoas)", min_value=1, value=50, step=1
+      )
+      status = st.selectbox(
+          "Status da Locação", ["Confirmado", "Pendente", "Cancelado"]
+      )
+      sinal_pago = st.checkbox("50% de Sinal Pago?")
+
+    st.divider()
+    st.subheader("🍺 Opcionais & Observações")
+    col3, col4 = st.columns(2)
+    with col3:
+      qtd_chopp = st.number_input(
+          "Volume de Chopp (Litros)", min_value=0, value=0, step=10
+      )
+    with col4:
+      estilo_chopp = st.selectbox("Estilo do Chopp", ESTILOS_CHOPP)
+
+    observacoes = st.text_area("Observações Gerais (Ex: Segunda opção para o dia)")
+
+    submitted = st.form_submit_button("Salvar Locação no Sistema")
+    if submitted:
+      if not cliente.strip():
+        st.warning("Por favor, preencha o nome do cliente.")
+      else:
+        novo_id = str(int(datetime.now().timestamp()))
+
+        nova_reserva = {
+            "id": novo_id,
+            "cliente": cliente,
+            "telefone": telefone,
+            "tipo_evento": tipo_evento,
+            "date": str(data_evento),
+            "turno": turno,
+            "qtd_pessoas": int(qtd_pessoas),
+            "status": status,
+            "sinal_pago": sinal_pago,
+            "qtd_chopp": int(qtd_chopp),
+            "estilo_chopp": estilo_chopp,
+            "observacoes": observacoes,
+        }
+        reservas.append(nova_reserva)
+        if salvar_no_github(reservas):
+          st.success("Nova negociação/locação salva com sucesso na nuvem!")
+          st.rerun()
+
+elif menu == "📅 Painel / Calendário":
+  # --- MONTAGEM DO CALENDÁRIO COM SUPORTE A MÚLTIPLOS EVENTOS POR DIA ---
+  calendar_events = []
+  for ev in eventos_filtrados:
+    status_ev = ev.get("status", "Pendente")
+    
+    if status_ev == "Confirmado":
+      icone_status = "✅ [Locado]"
+      cor_fundo = "#28a745"  # Verde
+    elif status_ev == "Cancelado":
+      icone_status = "❌ [Cancelado]"
+      cor_fundo = "#dc3545"  # Vermelho
+    else:
+      icone_status = "⏳ [Em Negociação]"
+      cor_fundo = "#ffc107"  # Amarelo/Laranja
+
+    sinal_txt = "Sinal OK" if ev.get("sinal_pago") else "Sinal Pendente"
+    chopp_txt = (
+        f" | 🍺 {ev.get('qtd_chopp')}L {ev.get('estilo_chopp')}"
+        if ev.get("qtd_chopp", 0) > 0
+        else ""
+    )
+
+    titulo_cal = (
+        f"{icone_status} {ev.get('cliente')} ({ev.get('tipo_evento')})"
+        f" - {ev.get('turno')} | {ev.get('qtd_pessoas')} pes. ({sinal_txt}){chopp_txt}"
+    )
+
+    calendar_events.append({
+        "title": titulo_cal,
+        "start": ev.get("date"),
+        "allDay": True,
+        "backgroundColor": cor_fundo,
+        "borderColor": cor_fundo,
+    })
+
+  calendar_options = {
+      "headerToolbar": {
+          "left": "prev,next",
+          "center": "title",
+          "right": "today",
+      },
+      "initialView": "dayGridMonth",
+      "editable": False,
+      "selectable": True,
+      "locale": "pt-br",
+  }
+
+  st.subheader("📆 Calendário de Locações")
+  calendar(
+      events=calendar_events, options=calendar_options, key="calendar_salao"
+  )
+
+  # --- GERENCIAMENTO E EDIÇÃO RÁPIDA POR DATA ---
+  st.divider()
+  st.subheader("📋 Gerenciar e Editar Dias Agendados")
+
+  if eventos_filtrados:
+    eventos_ordenados = sorted(eventos_filtrados, key=lambda x: x["date"])
+    
+    for ev in eventos_ordenados:
+      sinal_status = (
+          "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
+      )
+      ev_id = ev.get("id")
+      status_ev = ev.get("status", "Pendente")
+      
+      emoji_status = "✅" if status_ev == "Confirmado" else ("❌" if status_ev == "Cancelado" else "⏳")
+      data_br = formatar_data_br(ev.get('date'))
+
+      with st.expander(
+          f"{emoji_status} Data: {data_br} | Cliente: {ev.get('cliente')} ({ev.get('tipo_evento')}) - Status: {status_ev}"
+      ):
+        edit_key = f"edit_active_{ev_id}"
+        if edit_key not in st.session_state:
+          st.session_state[edit_key] = False
+
+        if not st.session_state[edit_key]:
+          # Modo Visualização Detalhada
+          col_info1, col_info2 = st.columns(2)
+          with col_info1:
+            st.write(f"**Data do Evento:** {data_br}")
+            st.write(f"**Tipo de Evento:** {ev.get('tipo_evento')}")
+            st.write(f"**Status:** {status_ev} | **Financeiro:** {sinal_status}")
+            st.write(f"**Turno:** {ev.get('turno')} | **Pessoas:** {ev.get('qtd_pessoas')}")
+          with col_info2:
+            if ev.get("telefone"):
+              st.write(f"**Contato:** {ev.get('telefone')}")
+              tel_limpo = (
+                  ev.get("telefone")
+                  .replace(" ", "")
+                  .replace("-", "")
+                  .replace("(", "")
+                  .replace(")", "")
+              )
+              st.markdown(f"[💬 Chamar no WhatsApp](https://wa.me/55{tel_limpo})")
+            if ev.get("qtd_chopp", 0) > 0:
+              st.write(f"**Chopp:** {ev.get('qtd_chopp')}L ({ev.get('estilo_chopp')})")
+
+          if ev.get("observacoes"):
+            st.write(f"**Obs:** {ev.get('observacoes')}")
+
+          st.markdown("")
+          col_b1, col_b2 = st.columns(2)
+          with col_b1:
+            if st.button("✏️ Editar Dados deste Dia", key=f"btn_edit_{ev_id}"):
+              st.session_state[edit_key] = True
+              st.rerun()
+          with col_b2:
+            if st.button("🗑️ Excluir Evento", key=f"btn_del_{ev_id}"):
+              reservas = [r for r in reservas if r.get("id") != ev_id]
+              if salvar_no_github(reservas):
+                st.success("Evento excluído com sucesso!")
+                st.rerun()
+
+        else:
+          # Modo Edição Direta
+          st.markdown("### ✍️ Editando Locação")
+
+          c_cli = st.text_input(
+              "Nome do Cliente", value=ev.get("cliente", ""), key=f"ec_{ev_id}"
+          )
+          c_tel = st.text_input(
+              "Telefone / WhatsApp",
+              value=ev.get("telefone", ""),
+              key=f"et_{ev_id}",
+          )
+
+          tipos_lista = [
+              "Aniversário",
+              "Casamento",
+              "Confraternização",
+              "Infantil",
+              "Outros",
+          ]
+          idx_tipo = (
+              tipos_lista.index(ev.get("tipo_evento"))
+              if ev.get("tipo_evento") in tipos_lista
+              else 0
+          )
+          c_tipo = st.selectbox(
+              "Tipo de Evento", tipos_lista, index=idx_tipo, key=f"etip_{ev_id}"
+          )
+
+          try:
+            data_obj = datetime.strptime(
+                ev.get("date", "2026-01-01"), "%Y-%m-%d"
+            ).date()
+          except:
+            data_obj = datetime.now().date()
+          c_data = st.date_input(
+              "Data da Locação", value=data_obj, key=f"edat_{ev_id}"
+          )
+
+          turnos_lista = ["Manhã", "Tarde", "Noite", "Dia Inteiro"]
+          idx_turno = (
+              turnos_lista.index(ev.get("turno"))
+              if ev.get("turno") in turnos_lista
+              else 0
+          )
+          c_turno = st.selectbox(
+              "Turno", turnos_lista, index=idx_turno, key=f"etur_{ev_id}"
+          )
+
+          c_pess = st.number_input(
+              "Headcount (Qtd de Pessoas)",
+              min_value=1,
+              value=int(ev.get("qtd_pessoas", 50)),
+              step=1,
+              key=f"epes_{ev_id}",
+          )
+
+          status_lista = ["Confirmado", "Pendente", "Cancelado"]
+          idx_status = (
+              status_lista.index(ev.get("status"))
+              if ev.get("status") in status_lista
+              else 0
+          )
+          c_status = st.selectbox(
+              "Status da Locação",
+              status_lista,
+              index=idx_status,
+              key=f"esta_{ev_id}",
+          )
+
+          c_sinal = st.checkbox(
+              "50% de Sinal Pago?",
+              value=bool(ev.get("sinal_pago", False)),
+              key=f"esin_{ev_id}",
+          )
+
+          c_chopp = st.number_input(
+              "Volume de Chopp (Litros)",
+              min_value=0,
+              value=int(ev.get("qtd_chopp", 0)),
+              step=10,
+              key=f"echo_{ev_id}",
+          )
+
+          idx_estilo = (
+              ESTILOS_CHOPP.index(ev.get("estilo_chopp"))
+              if ev.get("estilo_chopp") in ESTILOS_CHOPP
+              else 0
+          )
+          c_estilo = st.selectbox(
+              "Estilo do Chopp",
+              ESTILOS_CHOPP,
+              index=idx_estilo,
+              key=f"eest_{ev_id}",
+          )
+
+          c_obs = st.text_area(
+              "Observações Gerais",
+              value=ev.get("observacoes", ""),
+              key=f"eobs_{ev_id}",
+          )
+
+          col_salvar, col_cancelar = st.columns(2)
+          with col_salvar:
+            if st.button("💾 Salvar Alterações", key=f"bsav_{ev_id}"):
+              for item in reservas:
+                if item.get("id") == ev_id:
+                  item["cliente"] = c_cli
+                  item["telefone"] = c_tel
+                  item["tipo_evento"] = c_tipo
+                  item["date"] = str(c_data)
+                  item["turno"] = c_turno
+                  item["qtd_pessoas"] = int(c_pess)
+                  item["status"] = c_status
+                  item["sinal_pago"] = c_sinal
+                  item["qtd_chopp"] = int(c_chopp)
+                  item["estilo_chopp"] = c_estilo
+                  item["observacoes"] = c_obs
+                  break
+
+              if salvar_no_github(reservas):
+                st.session_state[edit_key] = False
+                st.success("Alterações salvas com sucesso!")
+                st.rerun()
+
+          with col_cancelar:
+            if st.button("❌ Cancelar", key=f"bcanc_{ev_id}"):
+              st.session_state[edit_key] = False
+              st.rerun()
+  else:
+    st.info("Nenhum evento encontrado para este filtro.")

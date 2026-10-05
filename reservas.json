@@ -72,5 +72,19 @@
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
         "observacoes": ""
+    },
+    {
+        "id": "1791230595",
+        "cliente": "Nathalia Bueno Luz",
+        "telefone": "42998563943",
+        "tipo_evento": "Outros",
+        "date": "2027-07-17",
+        "turno": "Manhã",
+        "qtd_pessoas": 100,
+        "status": "Confirmado",
+        "sinal_pago": true,
+        "qtd_chopp": 0,
+        "estilo_chopp": "Bohemian Pilsener",
+        "observacoes": ""
     }
 ]

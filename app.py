@@ -61,8 +61,7 @@ try:
   }
 except Exception as e:
   st.error(
-      "Erro: As credenciais do GitHub (GITHUB_TOKEN e GITHUB_REPO) não foram"
-      " encontradas nos Secrets do Streamlit."
+      "Erro: As credenciais do GitHub (GITHUB_TOKEN e GITHUB_REPO) não foram encontradas nos Secrets do Streamlit."
   )
   st.stop()
 
@@ -83,9 +82,7 @@ def salvar_no_github(reservas):
   _, sha = carregar_reservas()
 
   novo_conteudo = json.dumps(reservas, ensure_ascii=False, indent=4)
-  conteudo_base64 = base64.b64encode(novo_conteudo.encode("utf-8")).decode(
-      "utf-8"
-  )
+  conteudo_base64 = base64.b64encode(novo_conteudo.encode("utf-8")).decode("utf-8")
 
   dados = {
       "message": "Atualização de reservas via app do salão",
@@ -97,8 +94,7 @@ def salvar_no_github(reservas):
   response = requests.put(url, headers=HEADERS, json=dados)
   if response.status_code not in [200, 201]:
     st.error(
-        f"Erro ao salvar no GitHub ({response.status_code}):"
-        f" {response.json().get('message', 'Erro desconhecido')}"
+        f"Erro ao salvar no GitHub ({response.status_code}): {response.json().get('message', 'Erro desconhecido')}"
     )
     return False
   return True
@@ -128,29 +124,13 @@ with st.sidebar:
   st.title("Reservas Espaço")
   st.divider()
   
-  menu = st.radio(
-      "Navegação", ["📅 Painel / Calendário", "➕ Nova Locação"]
-  )
+  menu = st.radio("Navegação", ["📅 Painel / Calendário", "➕ Nova Locação"])
 
   st.divider()
   st.subheader("🔍 Filtros Globais")
   filtro_mes = st.selectbox(
       "Filtrar por Mês",
-      [
-          "Todos",
-          "01",
-          "02",
-          "03",
-          "04",
-          "05",
-          "06",
-          "07",
-          "08",
-          "09",
-          "10",
-          "11",
-          "12",
-      ],
+      ["Todos", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
   )
 
 st.title("🍻 Reservas Espaço - Koch Cervejaria")
@@ -186,52 +166,34 @@ if menu == "➕ Nova Locação":
       data_evento = st.date_input("Data da Locação")
     with col2:
       turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite", "Dia Inteiro"])
-      qtd_pessoas = st.number_input(
-          "Headcount (Qtd de Pessoas)", min_value=1, value=50, step=1
-      )
-      status = st.selectbox(
-          "Status da Locação", ["Confirmado", "Pendente", "Cancelado"]
-      )
+      qtd_pessoas = st.number_input("Headcount (Qtd de Pessoas)", min_value=1, value=50, step=1)
+      status = st.selectbox("Status da Locação", ["Confirmado", "Pendente", "Cancelado"])
       sinal_pago = st.checkbox("50% de Sinal Pago?")
 
     st.divider()
     st.subheader("💰 Valores e Custos")
     col_v1, col_v2, col_v3 = st.columns(3)
     with col_v1:
-      valor_locacao = st.number_input(
-          "Valor da Locação (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f"
-      )
+      valor_locacao = st.number_input("Valor da Locação (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f")
     with col_v2:
       sugerido_sinal = valor_locacao / 2.0
-      valor_sinal = st.number_input(
-          "Valor do Sinal - 50% (R$)", min_value=0.0, value=sugerido_sinal, step=50.0, format="%.2f"
-      )
+      valor_sinal = st.number_input("Valor do Sinal - 50% (R$)", min_value=0.0, value=sugerido_sinal, step=50.0, format="%.2f")
     with col_v3:
-      valor_caucao = st.number_input(
-          "Valor da Caução (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f"
-      )
+      valor_caucao = st.number_input("Valor da Caução (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f")
 
     col_v4, col_v5 = st.columns(2)
     with col_v4:
-      taxa_extra = st.number_input(
-          "Taxa Extra (R$)", min_value=0.0, value=0.0, step=10.0, format="%.2f"
-      )
+      taxa_extra = st.number_input("Taxa Extra (R$)", min_value=0.0, value=0.0, step=10.0, format="%.2f")
     with col_v5:
-      aluguel_som = st.number_input(
-          "Aluguel de Som (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f"
-      )
+      aluguel_som = st.number_input("Aluguel de Som (R$)", min_value=0.0, value=0.0, step=50.0, format="%.2f")
 
     st.divider()
     st.subheader("🍺 Opcionais de Chopp & Observações")
     col3, col4, col5 = st.columns(3)
     with col3:
-      qtd_chopp = st.number_input(
-          "Volume de Chopp (Litros)", min_value=0, value=0, step=10
-      )
+      qtd_chopp = st.number_input("Volume de Chopp (Litros)", min_value=0, value=0, step=10)
     with col4:
-      preco_litro_chopp = st.number_input(
-          "Preço do Litro (R$)", min_value=0.0, value=0.0, step=1.0, format="%.2f"
-      )
+      preco_litro_chopp = st.number_input("Preço do Litro (R$)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
     with col5:
       estilo_chopp = st.selectbox("Estilo do Chopp", ESTILOS_CHOPP)
 
@@ -318,16 +280,13 @@ elif menu == "📅 Painel / Calendário":
   }
 
   st.subheader("📆 Calendário de Locações")
-  calendar(
-      events=calendar_events, options=calendar_options, key="calendar_salao"
-  )
+  calendar(events=calendar_events, options=calendar_options, key="calendar_salao")
 
   # --- GERENCIAMENTO OTIMIZADO E LIMPO ---
   st.divider()
   st.subheader("📋 Gerenciamento e Lista de Locações")
 
   if eventos_filtrados:
-    # Filtro específico para o gerenciamento para evitar poluição visual
     col_f1, col_f2 = st.columns([2, 2])
     with col_f1:
       filtro_status_ger = st.selectbox(
@@ -337,7 +296,6 @@ elif menu == "📅 Painel / Calendário":
     with col_f2:
       busca_cliente = st.text_input("🔍 Buscar por nome do cliente", "")
 
-    # Aplicação dos filtros da aba de gerenciamento
     lista_gerenciar = eventos_filtrados
     if filtro_status_ger != "Todos":
       lista_gerenciar = [e for e in lista_gerenciar if e.get("status") == filtro_status_ger]
@@ -359,7 +317,6 @@ elif menu == "📅 Painel / Calendário":
         sinal_txt = "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
         tipo_ev_lbl = f" ({ev.get('tipo_evento')})" if ev.get('tipo_evento') else ""
 
-        # Caixa compacta e limpa para cada evento
         with st.container(border=True):
           col_info, col_botoes = st.columns([3, 1])
           
@@ -373,5 +330,94 @@ elif menu == "📅 Painel / Calendário":
 
           with col_botoes:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            # Botões de ação rápida limpos
-            btn_detalhes = st.button("👁️ Detalhes / Editar", key
+            btn_detalhes = st.button("👁️ Detalhes / Editar", key=f"btn_det_{ev_id}", use_container_width=True)
+            btn_excluir = st.button("🗑️ Excluir", key=f"btn_exc_{ev_id}", use_container_width=True)
+
+          if btn_excluir:
+            reservas = [r for r in reservas if r.get("id") != ev_id]
+            if salvar_no_github(reservas):
+              st.success("Evento excluído com sucesso!")
+              st.rerun()
+
+          if btn_detalhes:
+            st.session_state[f"modal_edit_{ev_id}"] = not st.session_state.get(f"modal_edit_{ev_id}", False)
+
+          if st.session_state.get(f"modal_edit_{ev_id}", False):
+            st.divider()
+            st.markdown(f"### ✍️ Editando Locação: {ev.get('cliente')}")
+            
+            c_cli = st.text_input("Nome do Cliente", value=ev.get("cliente", ""), key=f"ec_{ev_id}")
+            c_tel = st.text_input("Telefone / WhatsApp", value=ev.get("telefone", ""), key=f"et_{ev_id}")
+            c_tipo = st.text_input("Tipo de Evento", value=ev.get("tipo_evento", ""), key=f"etip_{ev_id}")
+
+            try:
+              data_obj = datetime.strptime(ev.get("date", "2026-01-01"), "%Y-%m-%d").date()
+            except:
+              data_obj = datetime.now().date()
+            c_data = st.date_input("Data da Locação", value=data_obj, key=f"edat_{ev_id}")
+
+            turnos_lista = ["Manhã", "Tarde", "Noite", "Dia Inteiro"]
+            idx_turno = turnos_lista.index(ev.get("turno")) if ev.get("turno") in turnos_lista else 0
+            c_turno = st.selectbox("Turno", turnos_lista, index=idx_turno, key=f"etur_{ev_id}")
+
+            c_pess = st.number_input("Headcount (Qtd de Pessoas)", min_value=1, value=int(ev.get("qtd_pessoas", 50)), step=1, key=f"epes_{ev_id}")
+
+            status_lista = ["Confirmado", "Pendente", "Cancelado"]
+            idx_status = status_lista.index(ev.get("status")) if ev.get("status") in status_lista else 0
+            c_status = st.selectbox("Status da Locação", status_lista, index=idx_status, key=f"esta_{ev_id}")
+
+            c_sinal = st.checkbox("50% de Sinal Pago?", value=bool(ev.get("sinal_pago", False)), key=f"esin_{ev_id}")
+
+            c_vloc = st.number_input("Valor da Locação (R$)", min_value=0.0, value=float(ev.get("valor_locacao", 0.0)), step=50.0, format="%.2f", key=f"evloc_{ev_id}")
+            c_vsin = st.number_input("Valor do Sinal - 50% (R$)", min_value=0.0, value=float(ev.get("valor_sinal", 0.0)), step=50.0, format="%.2f", key=f"evsin_{ev_id}")
+            c_vcau = st.number_input("Valor da Caução (R$)", min_value=0.0, value=float(ev.get("valor_caucao", 0.0)), step=50.0, format="%.2f", key=f"evcau_{ev_id}")
+            c_text = st.number_input("Taxa Extra (R$)", min_value=0.0, value=float(ev.get("taxa_extra", 0.0)), step=10.0, format="%.2f", key=f"evtex_{ev_id}")
+            c_som = st.number_input("Aluguel de Som (R$)", min_value=0.0, value=float(ev.get("aluguel_som", 0.0)), step=50.0, format="%.2f", key=f"evsom_{ev_id}")
+
+            c_chopp = st.number_input("Volume de Chopp (Litros)", min_value=0, value=int(ev.get("qtd_chopp", 0)), step=10, key=f"echo_{ev_id}")
+            c_preco_chopp = st.number_input("Preço do Litro (R$)", min_value=0.0, value=float(ev.get("preco_litro_chopp", 0.0)), step=1.0, format="%.2f", key=f"eprecho_{ev_id}")
+
+            idx_estilo = ESTILOS_CHOPP.index(ev.get("estilo_chopp")) if ev.get("estilo_chopp") in ESTILOS_CHOPP else 0
+            c_estilo = st.selectbox("Estilo do Chopp", ESTILOS_CHOPP, index=idx_estilo, key=f"eest_{ev_id}")
+
+            c_obs = st.text_area("Observações Gerais", value=ev.get("observacoes", ""), key=f"eobs_{ev_id}")
+
+            if ev.get("telefone"):
+              tel_limpo = ev.get("telefone").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+              st.markdown(f"[💬 Abrir WhatsApp do Cliente](https://wa.me/55{tel_limpo})")
+
+            col_salvar, col_cancelar = st.columns(2)
+            with col_salvar:
+              if st.button("💾 Salvar Alterações", key=f"bsav_{ev_id}"):
+                for item in reservas:
+                  if item.get("id") == ev_id:
+                    item["cliente"] = c_cli
+                    item["telefone"] = c_tel
+                    item["tipo_evento"] = c_tipo
+                    item["date"] = str(c_data)
+                    item["turno"] = c_turno
+                    item["qtd_pessoas"] = int(c_pess)
+                    item["status"] = c_status
+                    item["sinal_pago"] = c_sinal
+                    item["valor_locacao"] = float(c_vloc)
+                    item["valor_sinal"] = float(c_vsin)
+                    item["valor_caucao"] = float(c_vcau)
+                    item["taxa_extra"] = float(c_text)
+                    item["aluguel_som"] = float(c_som)
+                    item["qtd_chopp"] = int(c_chopp)
+                    item["preco_litro_chopp"] = float(c_preco_chopp)
+                    item["estilo_chopp"] = c_estilo
+                    item["observacoes"] = c_obs
+                    break
+
+                if salvar_no_github(reservas):
+                  st.session_state[f"modal_edit_{ev_id}"] = False
+                  st.success("Alterações salvas com sucesso!")
+                  st.rerun()
+
+            with col_cancelar:
+              if st.button("❌ Fechar Edição", key=f"bcanc_{ev_id}"):
+                st.session_state[f"modal_edit_{ev_id}"] = False
+                st.rerun()
+  else:
+    st.info("Nenhum evento encontrado para este filtro.")

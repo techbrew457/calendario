@@ -18,10 +18,10 @@ st.markdown(
     /* Força o calendário a ocupar 100% da largura e se adaptar a telas pequenas */
     .fc {
         max-width: 100% !important;
-        font-size: 0.8rem !important; /* Reduz levemente a fonte geral no mobile */
+        font-size: 0.8rem !important;
     }
     
-    /* Ajusta o cabeçalho do calendário (meses e botões) para não quebrar em telas estreitas */
+    /* Ajusta o cabeçalho do calendário para não quebrar em telas estreitas */
     .fc-toolbar {
         flex-direction: column !important;
         gap: 10px !important;
@@ -37,7 +37,7 @@ st.markdown(
         min-height: 70px !important;
     }
 
-    /* Ajusta o texto dos eventos dentro dos quadradinhos do calendário */
+    /* Ajusta o texto dos eventos dentro dos quadradinhos */
     .fc-event {
         font-size: 0.7rem !important;
         padding: 1px 3px !important;
@@ -452,11 +452,10 @@ elif menu == "📅 Painel / Calendário":
                   item["observacoes"] = c_obs
                   break
 
-exportar = salvar_no_github(reservas)
-if exportar:
-  st.session_state[edit_key] = False
-  st.success("Alterações salvas com sucesso!")
-  st.rerun()
+              if salvar_no_github(reservas):
+                st.session_state[edit_key] = False
+                st.success("Alterações salvas com sucesso!")
+                st.rerun()
 
           with col_cancelar:
             if st.button("❌ Cancelar", key=f"bcanc_{ev_id}"):

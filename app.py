@@ -124,11 +124,11 @@ if filtro_mes != "Todos":
   ]
 
 if menu == "➕ Nova Locação":
-  st.subheader("📝 Registrar Nova Locação")
+  st.subheader("📝 Registrar Nova Locação / Negociação")
   with st.form("form_cadastro", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
-      cliente = st.text_input("Nome do Cliente")
+      cliente = st.text_input("Nome do Cliente / Interessado")
       telefone = st.text_input("Telefone / WhatsApp (Ex: 42999999999)")
       tipo_evento = st.selectbox(
           "Tipo de Evento",
@@ -155,16 +155,15 @@ if menu == "➕ Nova Locação":
     with col4:
       estilo_chopp = st.selectbox("Estilo do Chopp", ESTILOS_CHOPP)
 
-    observacoes = st.text_area("Observações Gerais")
+    observacoes = st.text_area("Observações Gerais (Ex: Segunda opção para o dia)")
 
     submitted = st.form_submit_button("Salvar Locação no Sistema")
     if submitted:
       if not cliente.strip():
         st.warning("Por favor, preencha o nome do cliente.")
       else:
-        novo_id = str(len(reservas) + 1)
-        while any(r.get("id") == novo_id for r in reservas):
-          novo_id = str(int(novo_id) + 1)
+        # Gera ID único baseado no timestamp atual para evitar duplicidade ou conflitos
+        novo_id = str(int(datetime.now().timestamp()))
 
         nova_reserva = {
             "id": novo_id,
@@ -182,11 +181,11 @@ if menu == "➕ Nova Locação":
         }
         reservas.append(nova_reserva)
         if salvar_no_github(reservas):
-          st.success("Locação salva com sucesso na nuvem!")
+          st.success("Nova negociação/locação salva com sucesso na nuvem!")
           st.rerun()
 
 elif menu == "📅 Painel / Calendário":
-  # --- MONTAGEM DO CALENDÁRIO COM ÍCONES DE STATUS EM TODOS OS DIAS ---
+  # --- MONTAGEM DO CALENDÁRIO COM SUPORTE A MÚLTIPLOS EVENTOS POR DIA ---
   calendar_events = []
   for ev in eventos_filtrados:
     status_ev = ev.get("status", "Pendente")
@@ -243,7 +242,6 @@ elif menu == "📅 Painel / Calendário":
   st.subheader("📋 Gerenciar e Editar Dias Agendados")
 
   if eventos_filtrados:
-    # Ordena os eventos por data
     eventos_ordenados = sorted(eventos_filtrados, key=lambda x: x["date"])
     
     for ev in eventos_ordenados:
@@ -253,11 +251,10 @@ elif menu == "📅 Painel / Calendário":
       ev_id = ev.get("id")
       status_ev = ev.get("status", "Pendente")
       
-      # Emoji indicador rápido no título do expander
       emoji_status = "✅" if status_ev == "Confirmado" else ("❌" if status_ev == "Cancelado" else "⏳")
 
       with st.expander(
-          f"{emoji_status} Data: {ev.get('date')} | Cliente: {ev.get('cliente')} ({ev.get('tipo_evento')})"
+          f"{emoji_status} Data: {ev.get('date')} | Cliente: {ev.get('cliente')} ({ev.get('tipo_evento')}) - Status: {status_ev}"
       ):
         edit_key = f"edit_active_{ev_id}"
         if edit_key not in st.session_state:

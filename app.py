@@ -1,111 +1,314 @@
+import base64
 import json
-import os
+import requests
 import streamlit as st
 from streamlit_calendar import calendar
 
-# Configuração da página para ocupar a tela inteira (ótimo para celular)
+# Configuração da página otimizada para celular
 st.set_page_config(
-    page_title="Agenda - Salão de Festas", page_icon="📅", layout="wide"
+    page_title="Agenda - Salão de Festas", page_icon="📅", layout="centered"
 )
 
-# Arquivo JSON para salvar as reservas permanentemente na nuvem
-ARQUIVO_DADOS = "reservas.json"
+# Configurações do GitHub
+try:
+  GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
+  GITHUB_REPO = st.secrets["GITHUB_REPO"]
+except:
+  st.error("Configure os Secrets do GitHub no painel do Streamlit Cloud!")
+  st.stop()
+
+ARQUIVO_CAMINHO = "reservas.json"
+HEADERS = {
+    "Authorization": f"token {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github.v3+json",
+}
 
 
 def carregar_reservas():
-  if os.path.exists(ARQUIVO_DADOS):
-    with open(ARQUIVO_DADOS, "r", encoding="utf-8") as f:
-      return json.load(f)
-  return []
+  url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{ARQUIVO_CAMINHO}"
+  response = requests.get(url, headers=HEADERS)
+  if response.status_code == 200:
+    conteudo_base64 = response.json()["content"]
+    conteudo_bytes = base64.b64decode(conteudo_base64)
+    return json.loads(conteudo_bytes.decode("utf-8")), response.json()["sha"]
+  return [], None
 
 
-def salvar_reservas(reservas):
-  with open(ARQUIVO_DADOS, "w", encoding="utf-8") as f:
-    json.dump(reservas, f, ensure_ascii=False, indent=4)
+def salvar_no_github(reservas):
+  url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{ARQUIVO_CAMINHO}"
+  _, sha = carregar_reservas()
+
+  novo_conteudo = json.dumps(reservas, ensure_ascii=False, indent=4)
+  conteudo_base64 = base64.b64encode(novo_conteudo.encode("utf-8")).decode(
+      "utf-8"
+  )
+
+  dados = {
+      "message": "Atualização rápida via celular",
+      "content": conteudo_base64,
+  }
+  if sha:
+    dados["sha"] = sha
+
+  response = requests.put(url, headers=HEADERS, json=dados)
+  return response.status_code in [200, 201]
 
 
-# Carrega as reservas salvas
-eventos = carregar_reservas()
+eventos, _ = carregar_reservas()
 
-st.title("🎉 Agenda de Locação - Salão de Festas")
-st.markdown("Consulte os dias ocupados ou faça o login para gerenciar.")
+st.title("🎉 Salão de Festas")
+st.markdown("📱 **Painel de Agendamento Rápido**")
 
-# --- BARRA LATERAL: CONTROLE DE ACESSO (LOGIN) ---
+# --- BARRA LATERAL: LOGIN ---
 st.sidebar.header("Painel de Controle")
-senha_digitada = st.sidebar.text_input("Senha de Administrador", type="password")
-
-# Defina sua senha de acesso aqui (mude para a que preferir)
+senha_digitada = st.sidebar.text_input("Senha Admin", type="password")
 SENHA_MESTRA = "admin123"
 autorizado = senha_digitada == SENHA_MESTRA
 
 if autorizado:
   st.sidebar.success("Modo Edição Ativado ✅")
 else:
-  st.sidebar.info("Modo Apenas Visualização 👁️ (Digite a senha para editar)")
+  st.sidebar.info("Modo Visualização 👁️ (Digite a senha para gerenciar)")
 
-# --- ÁREA DE EDIÇÃO (APENAS PARA QUEM TEM A SENHA) ---
-if autorizado:
-  st.subheader("➕ Adicionar Nova Locação")
-  with st.form("form_reserva", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-      nome_cliente = st.text_input("Nome do Cliente / Evento")
-      data_evento = st.date_input("Data da Festa")
-    with col2:
-      horario = st.text_input(
-          "Horário (Ex: 14:00 às 22:00)", value="Das 08h às 22h"
-      )
-      observacoes = st.text_input("Detalhes (Opcional)", value="Pago / Confirmado")
-
-    botao_salvar = st.form_submit_button("Salvar Locação")
-
-    if botao_salvar:
-      if nome_cliente:
-        # Formato exigido pelo calendário
-        novo_evento = {
-            "title": f"🔒 {nome_cliente} ({horario})",
-            "date": str(data_evento),
-            "backgroundColor": "#FF4B4B",
-            "borderColor": "#FF4B4B",
-            "textColor": "#ffffff",
-        }
-        eventos.append(novo_evento)
-        salvar_reservas(eventos)
-        st.success(f"Reserva para {nome_cliente} adicionada com sucesso!")
-        st.rerun()
-      else:
-        st.error("Por favor, preencha o nome do cliente.")
-
-  # Opção para excluir evento
-  if eventos:
-    st.subheader("🗑️ Remover Locação")
-    titulos_eventos = [e["title"] for e in eventos]
-    evento_para_remover = st.selectbox(
-        "Selecione o evento para cancelar", titulos_eventos
-    )
-    if st.button("Excluir Evento Selecionado"):
-      eventos = [e for e in eventos if e["title"] != evento_para_remover]
-      salvar_reservas(eventos)
-      st.warning("Evento removido com sucesso!")
-      st.rerun()
+# --- LEGENDA DE CORES ---
+st.markdown("""
+**Status:** <span style="color:red">■</span> **Locado** | <span style="color:orange">■</span> **Negociação** | <span style="color:gray">■</span> **Indisponível**
+""", unsafe_allow_html=True)
 
 st.divider()
 
-# --- EXIBIÇÃO DO CALENDARIZADOR (VISÍVEL PARA TODOS) ---
-st.subheader("📅 Calendário de Reservas")
+# --- FILTROS RÁPIDOS ---
+filtro_status = st.selectbox(
+    "Filtrar visualização:", ["Todos", "Locado", "Em Negociação", "Indisponível"]
+)
+eventos_filtrados = (
+    eventos
+    if filtro_status == "Todos"
+    else [e for e in eventos if e.get("status") == filtro_status]
+)
 
-# Configurações de visualização do calendário (estilo Google Agenda)
-calendar_options = {
-    "editable": False,
-    "selectable": True,
-    "initialView": "dayGridMonth",  # Visão de mês por padrão (ótimo para celular)
-    "headerToolbar": {
-        "left": "prev,next today",
-        "center": "title",
-        "right": "dayGridMonth,timeGridWeek",
+# --- ÁREA ADMINISTRATIVA OTIMIZADA PARA CELULAR ---
+if autorizado:
+  st.divider()
+  st.subheader("⚙ Gerenciamento")
+
+  acao = st.radio("Escolha:", ["➕ Novo Evento", "✏️ Editar / Excluir"], horizontal=True)
+
+  # 1. ADICIONAR NOVO (Layout Vertical ideal para toque no celular)
+  if acao == "➕ Novo Evento":
+    with st.form("form_celular", clear_on_submit=True):
+      st.markdown("### Preenchimento Rápido")
+
+      nome_cliente = st.text_input("Nome do Cliente *")
+      telefone = st.text_input("WhatsApp / Telefone")
+      data_evento = st.date_input("Data do Evento *")
+
+      tipo_evento = st.selectbox(
+          "Tipo de Evento",
+          [
+              "Aniversário",
+              "Casamento",
+              "Confraternização",
+              "Formatura",
+              "Outros",
+          ],
+      )
+
+      status = st.selectbox(
+          "Status", ["Locado", "Em Negociação", "Indisponível"]
+      )
+      turno = st.selectbox(
+          "Turno", ["Dia Inteiro (08h às 22h)", "Tarde/Noite", "Noite"]
+      )
+
+      qtd_pessoas = st.slider(
+          "Quantidade Estimada de Pessoas", 10, 300, 100, step=10
+      )
+
+      st.markdown("---")
+      sinal_pago = st.checkbox("💵 Sinal de 50% já foi pago?")
+
+      col_chop1, col_chop2 = st.columns(2)
+      with col_chop1:
+        qtd_chopp = st.number_input(
+            "Litros de Chopp", min_value=0, value=0, step=30
+        )
+      with col_chop2:
+        estilo_chopp = st.selectbox(
+            "Estilo", ["Nenhum", "Pilsen", "IPA", "Weiss", "Mixed"]
+        )
+
+      observacoes = st.text_area("Observações (Opcional)")
+
+      salvar = st.form_submit_button(
+          "💾 Salvar na Agenda", use_container_width=True
+      )
+
+      if salvar:
+        if nome_cliente:
+          cor = (
+              "#FF4B4B"
+              if status == "Locado"
+              else ("#FFA500" if status == "Em Negociação" else "#808080")
+          )
+          sinal_txt = "Sinal OK" if sinal_pago else "Sinal Pendente"
+          chopp_txt = (
+              f" | 🍺 {qtd_chopp}L ({estilo_chopp})"
+              if qtd_chopp > 0 and estilo_chopp != "Nenhum"
+              else ""
+          )
+
+          novo_evento = {
+              "id": str(len(eventos) + 1),
+              "title": f"[{status}] {nome_cliente} - {tipo_evento} ({sinal_txt}){chopp_txt}",
+              "date": str(data_evento),
+              "backgroundColor": cor,
+              "borderColor": cor,
+              "textColor": "#ffffff",
+              "cliente": nome_cliente,
+              "telefone": telefone,
+              "tipo_evento": tipo_evento,
+              "status": status,
+              "turno": turno,
+              "qtd_pessoas": qtd_pessoas,
+              "sinal_pago": sinal_pago,
+              "qtd_chopp": qtd_chopp,
+              "estilo_chopp": estilo_chopp if estilo_chopp != "Nenhum" else "",
+              "observacoes": observacoes,
+          }
+          eventos.append(novo_evento)
+
+          if salvar_no_github(eventos):
+            st.success("Salvo com sucesso!")
+            st.rerun()
+          else:
+            st.error("Erro ao salvar no GitHub.")
+        else:
+          st.error("Informe o nome do cliente.")
+
+  # 2. EDITAR OU EXCLUIR
+  else:
+    if not eventos:
+      st.info("Nenhum evento para alterar.")
+    else:
+      opcoes = {
+          f"{e['date']} - {e.get('cliente')} ({e.get('status')})": e
+          for e in eventos
+      }
+      selecionado = st.selectbox("Selecione o evento:", list(opcoes.keys()))
+
+      if selecionado:
+        ev = opcoes[selecionado]
+        with st.form("form_edicao"):
+          novo_nome = st.text_input("Nome", value=ev.get("cliente", ""))
+          novo_tel = st.text_input("Telefone", value=ev.get("telefone", ""))
+          novo_status = st.selectbox(
+              "Status",
+              ["Locado", "Em Negociação", "Indisponível"],
+              index=["Locado", "Em Negociação", "Indisponível"].index(
+                  ev.get("status", "Locado")
+              )
+              if ev.get("status") in ["Locado", "Em Negociação", "Indisponível"]
+              else 0,
+          )
+          novo_sinal = st.checkbox(
+              "Sinal Pago?", value=bool(ev.get("sinal_pago", False))
+          )
+          novas_obs = st.text_area(
+              "Observações", value=ev.get("observacoes", "")
+          )
+
+          col1, col2 = st.columns(2)
+          btn_salvar = col1.form_submit_button(
+              "Atualizar", use_container_width=True
+          )
+          btn_del = col2.form_submit_button(
+              "Excluir", use_container_width=True
+          )
+
+          if btn_salvar:
+            cor = (
+                "#FF4B4B"
+                if novo_status == "Locado"
+                else (
+                    "#FFA500" if novo_status == "Em Negociação" else "#808080"
+                )
+            )
+            sinal_txt = "Sinal OK" if novo_sinal else "Sinal Pendente"
+
+            for e in eventos:
+              if e.get("id") == ev.get("id") or e.get("title") == ev.get("title"):
+                e["cliente"] = novo_nome
+                e["telefone"] = novo_tel
+                e["status"] = novo_status
+                e["sinal_pago"] = novo_sinal
+                e["observacoes"] = novas_obs
+                e["title"] = (
+                    f"[{novo_status}] {novo_nome} -"
+                    f" {e.get('tipo_evento','')} ({sinal_txt})"
+                )
+                e["backgroundColor"] = cor
+                e["borderColor"] = cor
+                break
+
+            if salvar_no_github(eventos):
+              st.success("Atualizado!")
+              st.rerun()
+
+          if btn_del:
+            eventos = [
+                e
+                for e in eventos
+                if not (
+                    e.get("id") == ev.get("id")
+                    or e.get("title") == ev.get("title")
+                )
+            ]
+            if salvar_no_github(eventos):
+              st.warning("Excluído!")
+              st.rerun()
+
+st.divider()
+
+# --- CALENDÁRIO VISUAL ---
+st.subheader("📅 Calendário")
+calendar(
+    events=eventos_filtrados,
+    options={
+        "editable": False,
+        "selectable": True,
+        "initialView": "dayGridMonth",
+        "headerToolbar": {
+            "left": "prev,next today",
+            "center": "title",
+            "right": "dayGridMonth",
+        },
+        "locale": "pt-br",
     },
-    "locale": "pt-br",
-}
+    key="cal_mobile",
+)
 
-# Renderiza o componente de calendário na tela
-calendar(events=eventos, options=calendar_options, key="calendario_salao")
+# --- LISTA RÁPIDA ABAIXO (PERFEITA PARA CONSULTA NO CELULAR) ---
+st.divider()
+st.subheader("📋 Detalhes dos Eventos")
+if eventos_filtrados:
+  for ev in sorted(eventos_filtrados, key=lambda x: x["date"]):
+    sinal_status = "✅ Sinal Pago" else "⏳ Sinal Pendente"
+    with st.expander(f"📌 {ev.get('date')} — {ev.get('cliente')}"):
+      st.write(f"**Tipo:** {ev.get('tipo_evento')}")
+      st.write(f"**Status:** {ev.get('status')} | **Financeiro:** {sinal_status}")
+      st.write(f"**Turno:** {ev.get('turno')} ({ev.get('qtd_pessoas')} pessoas)")
+      if ev.get("telefone"):
+        st.write(f"**Contato:** {ev.get('telefone')}")
+        # Botão direto para abrir o WhatsApp do cliente pelo celular
+        st.markdown(
+            f"[💬 Chamar no WhatsApp](https://wa.me/55{ev.get('telefone').replace(' ', '').replace('-', '')})"
+        )
+      if ev.get("qtd_chopp", 0) > 0:
+        st.write(
+            f"**Chopp:** {ev.get('qtd_chopp')}L ({ev.get('estilo_chopp')})"
+        )
+      if ev.get("observacoes"):
+        st.write(f"**Obs:** {ev.get('observacoes')}")
+else:
+  st.info("Nenhum evento encontrado.")

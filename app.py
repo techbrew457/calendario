@@ -293,7 +293,7 @@ st.divider()
 st.subheader("📋 Detalhes dos Eventos")
 if eventos_filtrados:
   for ev in sorted(eventos_filtrados, key=lambda x: x["date"]):
-    sinal_status = "✅ Sinal Pago" else "⏳ Sinal Pendente"
+   sinal_status = "✅ Sinal Pago" if ev.get("sinal_pago") else "⏳ Sinal Pendente"
     with st.expander(f"📌 {ev.get('date')} — {ev.get('cliente')}"):
       st.write(f"**Tipo:** {ev.get('tipo_evento')}")
       st.write(f"**Status:** {ev.get('status')} | **Financeiro:** {sinal_status}")

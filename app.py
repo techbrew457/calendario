@@ -371,7 +371,7 @@ elif menu == "📅 Painel / Calendário":
 
             c_vloc = st.number_input("Valor da Locação (R$)", min_value=0.0, value=float(ev.get("valor_locacao", 0.0)), step=50.0, format="%.2f", key=f"evloc_{ev_id}")
             c_vsin = st.number_input("Valor do Sinal - 50% (R$)", min_value=0.0, value=float(ev.get("valor_sinal", 0.0)), step=50.0, format="%.2f", key=f"evsin_{ev_id}")
-            c_vcau = st.number_input("Valor da Caução (R$)", min_value=0.0, value=float(ev.get("valor_caucao", 0.0)), step50.0, format="%.2f", key=f"evcau_{ev_id}")
+            c_vcau = st.number_input("Valor da Caução (R$)", min_value=0.0, value=float(ev.get("valor_caucao", 0.0)), step=50.0, format="%.2f", key=f"evcau_{ev_id}")
             c_text = st.number_input("Taxa Extra (R$)", min_value=0.0, value=float(ev.get("taxa_extra", 0.0)), step=10.0, format="%.2f", key=f"evtex_{ev_id}")
             c_som = st.number_input("Aluguel de Som (R$)", min_value=0.0, value=float(ev.get("aluguel_som", 0.0)), step=50.0, format="%.2f", key=f"evsom_{ev_id}")
 
@@ -379,46 +379,4 @@ elif menu == "📅 Painel / Calendário":
             c_preco_chopp = st.number_input("Preço do Litro (R$)", min_value=0.0, value=float(ev.get("preco_litro_chopp", 0.0)), step=1.0, format="%.2f", key=f"eprecho_{ev_id}")
 
             idx_estilo = ESTILOS_CHOPP.index(ev.get("estilo_chopp")) if ev.get("estilo_chopp") in ESTILOS_CHOPP else 0
-            c_estilo = st.selectbox("Estilo do Chopp", ESTILOS_CHOPP, index=idx_estilo, key=f"eest_{ev_id}")
-
-            c_obs = st.text_area("Observações Gerais", value=ev.get("observacoes", ""), key=f"eobs_{ev_id}")
-
-            if ev.get("telefone"):
-              tel_limpo = ev.get("telefone").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-              st.markdown(f"[💬 Abrir WhatsApp do Cliente](https://wa.me/55{tel_limpo})")
-
-            col_salvar, col_cancelar = st.columns(2)
-            with col_salvar:
-              if st.button("💾 Salvar Alterações", key=f"bsav_{ev_id}"):
-                for item in reservas:
-                  if item.get("id") == ev_id:
-                    item["cliente"] = c_cli
-                    item["telefone"] = c_tel
-                    item["tipo_evento"] = c_tipo
-                    item["date"] = str(c_data)
-                    item["turno"] = c_turno
-                    item["qtd_pessoas"] = int(c_pess)
-                    item["status"] = c_status
-                    item["sinal_pago"] = c_sinal
-                    item["valor_locacao"] = float(c_vloc)
-                    item["valor_sinal"] = float(c_vsin)
-                    item["valor_caucao"] = float(c_vcau)
-                    item["taxa_extra"] = float(c_text)
-                    item["aluguel_som"] = float(c_som)
-                    item["qtd_chopp"] = int(c_chopp)
-                    item["preco_litro_chopp"] = float(c_preco_chopp)
-                    item["estilo_chopp"] = c_estilo
-                    item["observacoes"] = c_obs
-                    break
-
-                if salvar_no_github(reservas):
-                  st.session_state[f"modal_edit_{ev_id}"] = False
-                  st.success("Alterações salvas com sucesso!")
-                  st.rerun()
-
-            with col_cancelar:
-              if st.button("❌ Fechar Edição", key=f"bcanc_{ev_id}"):
-                st.session_state[f"modal_edit_{ev_id}"] = False
-                st.rerun()
-  else:
-    st.info("Nenhum evento encontrado para este filtro.")
+            c_

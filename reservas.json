@@ -78,7 +78,7 @@
         "cliente": "Nathalia Bueno Luz",
         "telefone": "42998563943",
         "tipo_evento": "Outros",
-        "date": "2027-07-17",
+        "date": "2026-07-17",
         "turno": "Manhã",
         "qtd_pessoas": 100,
         "status": "Confirmado",
@@ -87,6 +87,9 @@
         "estilo_chopp": "Bohemian Pilsener",
         "observacoes": "",
         "unidade": "Salão Principal",
-        "valor_locacao": 1080.0
+        "valor_locacao": 1080.0,
+        "valor_sinal": 540.0,
+        "valor_som": 0.0,
+        "taxa_cuidador": false
     }
 ]

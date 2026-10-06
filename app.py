@@ -218,4 +218,317 @@ elif menu == "📅 Calendário Geral":
 
     sinal_txt = "Sinal OK" if ev.get("sinal_pago") else "Sinal Pendente"
     
-    barris = ev.get("
+    barris = ev.get("barris", [])
+    total_litros_ev = sum(int(b.get("litros", 0)) for b in barris)
+    chopp_str = f" | 🍺 {total_litros_ev}L" if total_litros_ev > 0 else ""
+    
+    data_br_cal = formatar_data_br(ev.get("date"))
+    titulo = f"{icone} {data_br_cal} - {ev.get('cliente')} ({sinal_txt}){chopp_str}"
+
+    calendar_events.append({
+        "title": titulo,
+        "start": ev.get("date"),
+        "allDay": True,
+        "backgroundColor": cor,
+        "borderColor": cor,
+    })
+
+  calendar_options = {
+      "headerToolbar": {"left": "prev,next", "center": "title", "right": "today"},
+      "initialView": "dayGridMonth",
+      "locale": "pt-br",
+  }
+
+  calendar(events=calendar_events, options=calendar_options, key="calendario_principal")
+
+
+# ==========================================
+# 3. NOVA LOCAÇÃO
+# ==========================================
+elif menu == "➕ Nova Locação":
+  st.title("📝 Registrar Nova Locação ou Negociação")
+  st.markdown("Preencha os dados, opcionais de som, monitor/cuidador, barris e valores.")
+
+  with st.form("form_nova_locacao", clear_on_submit=True):
+    col_u1, col_u2 = st.columns(2)
+    with col_u1:
+      cliente = st.text_input("Nome do Cliente / Interessado *")
+      telefone = st.text_input("WhatsApp do Cliente (Ex: 42999999999)")
+      documento = st.text_input("CPF ou CNPJ")
+    with col_u2:
+      tipo_evento = st.text_input("Tipo de Evento (Ex: Aniversário, Casamento)")
+      
+      st.markdown("**Data do Evento**")
+      col_d1, col_d2, col_d3 = st.columns(3)
+      hoje = datetime.now()
+      with col_d1:
+        dia_ev = st.selectbox("Dia", list(range(1, 32)), index=hoje.day - 1, key="d_dia")
+      with col_d2:
+        mes_ev = st.selectbox("Mês", list(range(1, 13)), index=hoje.month - 1, key="d_mes", format_func=lambda x: f"{x:02d}")
+      with col_d3:
+        ano_ev = st.selectbox("Ano", [hoje.year, hoje.year + 1, hoje.year + 2], index=0, key="d_ano")
+
+      turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite", "Dia Inteiro"])
+      qtd_pessoas = st.number_input("Headcount (Pessoas)", min_value=1, value=50, step=1)
+
+    st.divider()
+    st.subheader("🔊 Opcionais e Serviços Adicionais")
+    
+    col_op1, col_op2 = st.columns(2)
+    with col_op1:
+      valor_som = st.number_input("Aluguel da Caixa de Som (R$)", min_value=0.0, value=0.0, step=10.0, format="%.2f")
+    with col_op2:
+      taxa_cuidador_str = st.selectbox("Taxa de Monitor / Cuidador para a festa?", ["Não", "Sim"])
+      taxa_cuidador = True if taxa_cuidador_str == "Sim" else False
+
+    st.divider()
+    st.subheader("🍺 Gestão de Múltiplos Barris de Chopp Koch")
+    st.markdown("Defina o estilo, tamanho e o **valor específico** para cada barril:")
+
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+      st.markdown("##### 🛢️ Barril 1")
+      estilo_1 = st.selectbox("Estilo 1", ["Nenhum"] + ESTILOS_CHOPP, key="e1")
+      litros_1 = st.selectbox("Tamanho 1", [0, 15, 30, 50], index=2, key="t1")
+      valor_b1 = st.number_input("Valor do Barril 1 (R$)", min_value=0.0, value=300.0, step=10.0, format="%.2f", key="vb1")
+
+      st.markdown("##### 🛢️ Barril 3")
+      estilo_3 = st.selectbox("Estilo 3", ["Nenhum"] + ESTILOS_CHOPP, key="e3")
+      litros_3 = st.selectbox("Tamanho 3", [0, 15, 30, 50], index=0, key="t3")
+      valor_b3 = st.number_input("Valor do Barril 3 (R$)", min_value=0.0, value=0.0, step=10.0, format="%.2f", key="vb3")
+
+    with col_b2:
+      st.markdown("##### 🛢️ Barril 2")
+      estilo_2 = st.selectbox("Estilo 2", ["Nenhum"] + ESTILOS_CHOPP, key="e2")
+      litros_2 = st.selectbox("Tamanho 2", [0, 15, 30, 50], index=0, key="t2")
+      valor_b2 = st.number_input("Valor do Barril 2 (R$)", min_value=0.0, value=0.0, step=10.0, format="%.2f", key="vb2")
+
+      st.markdown("##### 🛢️ Barril 4")
+      estilo_4 = st.selectbox("Estilo 4", ["Nenhum"] + ESTILOS_CHOPP, key="e4")
+      litros_4 = st.selectbox("Tamanho 4", [0, 15, 30, 50], index=0, key="t4")
+      valor_b4 = st.number_input("Valor do Barril 4 (R$)", min_value=0.0, value=0.0, step=10.0, format="%.2f", key="vb4")
+
+    st.divider()
+    st.subheader("💰 Comercial e Valores do Salão")
+    col_v1, col_v2, col_v3 = st.columns(3)
+    with col_v1:
+      valor_locacao = st.number_input("Valor da Locação (R$)", min_value=0.0, value=1000.0, step=50.0, format="%.2f")
+    with col_v2:
+      valor_sinal = st.number_input("Valor do Sinal (R$)", min_value=0.0, value=500.0, step=50.0, format="%.2f")
+    with col_v3:
+      valor_caucao = st.number_input("Valor Caução (R$)", min_value=0.0, value=200.0, step=50.0, format="%.2f")
+
+    col_v4, col_v5 = st.columns(2)
+    with col_v4:
+      status = st.selectbox("Status da Reserva", ["Pendente", "Confirmado", "Cancelado"])
+    with col_v5:
+      sinal_pago = st.checkbox("Sinal Já Foi Pago?")
+
+    observacoes = st.text_area("Observações Específicas / Acordos")
+
+    submitted = st.form_submit_button("💾 Salvar Nova Locação na Nuvem")
+    if submitted:
+      if not cliente.strip():
+        st.warning("⚠️ O nome do cliente é obrigatório.")
+      else:
+        try:
+          data_formatada_str = f"{ano_ev}-{int(mes_ev):02d}-{int(dia_ev):02d}"
+          datetime.strptime(data_formatada_str, "%Y-%m-%d")
+        except ValueError:
+          st.error("⚠️ Data inválida. Verifique o dia e o mês selecionados.")
+          st.stop()
+
+        lista_barris = []
+        for est, lit, val in [
+            (estilo_1, litros_1, valor_b1),
+            (estilo_2, litros_2, valor_b2),
+            (estilo_3, litros_3, valor_b3),
+            (estilo_4, litros_4, valor_b4),
+        ]:
+          if est != "Nenhum" and lit > 0:
+            lista_barris.append({"estilo": est, "litros": int(lit), "valor_total": float(val)})
+
+        novo_id = str(int(datetime.now().timestamp()))
+        nova_reserva = {
+            "id": novo_id,
+            "cliente": cliente,
+            "telefone": telefone,
+            "documento": documento,
+            "tipo_evento": tipo_evento,
+            "date": data_formatada_str,
+            "turno": turno,
+            "qtd_pessoas": int(qtd_pessoas),
+            "status": status,
+            "sinal_pago": sinal_pago,
+            "valor_locacao": float(valor_locacao),
+            "valor_sinal": float(valor_sinal),
+            "valor_caucao": float(valor_caucao),
+            "valor_som": float(valor_som),
+            "taxa_cuidador": taxa_cuidador,
+            "barris": lista_barris,
+            "observacoes": observacoes,
+        }
+        reservas.append(nova_reserva)
+        if salvar_dados_nuvem(reservas):
+          st.success("🎉 Locação registrada e salva com sucesso!")
+          st.rerun()
+
+
+# ==========================================
+# 4. LISTA & GESTÃO
+# ==========================================
+elif menu == "📋 Lista & Gestão":
+  st.title("📋 Gerenciamento de Locações")
+  st.markdown("Consulte, edite status, abra o WhatsApp direto ou gere esboços de contratos.")
+
+  if eventos_filtrados:
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+      filtro_status_lst = st.selectbox("Filtrar por Status", ["Todos", "Confirmado", "Pendente", "Cancelado"])
+    with col_b2:
+      busca_texto = st.text_input("🔍 Buscar por Cliente", "")
+
+    lista_exibicao = eventos_filtrados
+    if filtro_status_lst != "Todos":
+      lista_exibicao = [e for e in lista_exibicao if e.get("status") == filtro_status_lst]
+    if busca_texto.strip():
+      lista_exibicao = [e for e in lista_exibicao if busca_texto.lower() in e.get("cliente", "").lower()]
+
+    for ev in sorted(lista_exibicao, key=lambda x: x["date"]):
+      ev_id = ev.get("id")
+      st_ev = ev.get("status", "Pendente")
+      emoji = "✅" if st_ev == "Confirmado" else ("❌" if st_ev == "Cancelado" else "⏳")
+      data_formatada = formatar_data_br(ev.get("date"))
+
+      with st.container(border=True):
+        col_i1, col_i2 = st.columns([3, 1])
+        with col_i1:
+          st.markdown(f"**{emoji} Data: {data_formatada} - {ev.get('cliente')}**")
+          st.caption(f"Turno: **{ev.get('turno')}** | Evento: {ev.get('tipo_evento', 'Geral')} | Status: **{st_ev}**")
+          
+          tel = ev.get("telefone", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+          if tel:
+            st.markdown(f"[💬 Abrir Conversa no WhatsApp](https://wa.me/55{tel})")
+          
+          v_loc = float(ev.get("valor_locacao", 0))
+          v_sinal_cadastrado = float(ev.get("valor_sinal", 0))
+          sinal_pago_status = "Pago ✅" if ev.get("sinal_pago") else "Pendente ⏳"
+          v_som = float(ev.get("valor_som", 0))
+          tem_cuidador = "Sim" if ev.get("taxa_cuidador", False) else "Não"
+          
+          barris = ev.get("barris", [])
+          if not barris and ev.get("qtd_chopp"):
+            barris = [{"estilo": ev.get("estilo_chopp", "Pilsen"), "litros": ev.get("qtd_chopp"), "valor_total": int(ev.get("qtd_chopp", 0)) * float(ev.get("preco_litro_chopp", 15.0))}]
+          
+          desc_barris = ", ".join([f"{b['litros']}L {b['estilo']} (R$ {float(b.get('valor_total', 0)):,.2f})" for b in barris]) if barris else "Nenhum chopp"
+          v_chopp_total = sum(float(b.get("valor_total", 0)) for b in barris)
+
+          st.text(f"Locação: R$ {v_loc:,.2f} | Sinal: R$ {v_sinal_cadastrado:,.2f} ({sinal_pago_status})")
+          st.text(f"Som: R$ {v_som:,.2f} | Cuidador da festa: {tem_cuidador}")
+          st.text(f"Chopp: {desc_barris} | Total Chopp: R$ {v_chopp_total:,.2f}")
+
+        with col_i2:
+          btn_edit = st.button("✏️ Editar", key=f"ed_{ev_id}", use_container_width=True)
+          btn_contrato = st.button("📄 Contrato", key=f"ct_{ev_id}", use_container_width=True)
+          btn_del = st.button("🗑️ Excluir", key=f"dl_{ev_id}", use_container_width=True)
+
+        if btn_del:
+          reservas = [r for r in reservas if r.get("id") != ev_id]
+          if salvar_dados_nuvem(reservas):
+            st.success("Reserva excluída com sucesso!")
+            st.rerun()
+
+        if btn_contrato:
+          st.divider()
+          st.markdown("### 📄 Esboço de Contrato de Locação")
+          
+          texto_barris_contrato = "\n".join([f"- {b['litros']} litros de Chopp estilo {b['estilo']} - R$ {float(b.get('valor_total', 0)):,.2f}" for b in barris]) if barris else "Nenhum opcional de chopp."
+          texto_som = f"- Aluguel de Caixa de Som: R$ {float(ev.get('valor_som', 0)):,.2f}\n" if float(ev.get('valor_som', 0)) > 0 else "- Caixa de Som: Não contratada\n"
+          texto_cuidador = "- Taxa de Monitor/Cuidador durante a festa: INCLUSA" if ev.get('taxa_cuidador', False) else "- Taxa de Monitor/Cuidador durante a festa: Não contratada"
+
+          contrato_texto = f"""
+CONTRATO DE LOCAÇÃO TEMPORÁRIA DE SALÃO DE FESTAS
+CONTRATANTE: {ev.get('cliente')} | Documento: {ev.get('documento', 'Não informado')} | Tel/WhatsApp: {ev.get('telefone')}
+DATA DO EVENTO: {data_formatada} ({ev.get('turno')})
+TIPO DE EVENTO: {ev.get('tipo_evento', 'Festividade')}
+HEADCOUNT: {ev.get('qtd_pessoas')} pessoas
+
+CLÁUSULA PRIMEIRA - VALORES E FORMA DE PAGAMENTO:
+O valor total ajustado para a locação do espaço é de R$ {float(ev.get('valor_locacao', 0)):,.2f}, sendo devido um sinal de R$ {float(ev.get('valor_sinal', 0)):,.2f} (Status: {"Pago" if ev.get("sinal_pago") else "Pendente"}). 
+Caução de garantia estipulada em R$ {float(ev.get('valor_caucao', 0)):,.2f}.
+
+CLÁUSULA SEGUNDA - ITENS E OPCIONAIS CONTRATADOS:
+{texto_som}{texto_cuidador}
+
+CLÁUSULA TERCEIRA - FORNECIMENTO DE CHOPP KOCH:
+Opcionais de chopp contratados:
+{texto_barris_contrato}
+
+CLÁUSULA QUARTA - OBSERVAÇÕES:
+{ev.get('observacoes', 'Nenhuma observação específica registrada.')}
+          """
+          st.text_area("Copie o contrato abaixo para enviar ao cliente:", contrato_texto, height=250)
+
+        if btn_edit:
+          st.session_state[f"edit_mode_{ev_id}"] = not st.session_state.get(f"edit_mode_{ev_id}", False)
+
+        if st.session_state.get(f"edit_mode_{ev_id}", False):
+          st.divider()
+          st.markdown(f"**Editando: {ev.get('cliente')}**")
+          
+          e_cli = st.text_input("Cliente", value=ev.get("cliente", ""), key=f"c_{ev_id}")
+          e_tel = st.text_input("WhatsApp", value=ev.get("telefone", ""), key=f"t_{ev_id}")
+          
+          try:
+            partes_dt = ev.get("date", "2026-01-01").split("-")
+            ano_atu, mes_atu, dia_atu = int(partes_dt[0]), int(partes_dt[1]), int(partes_dt[2])
+          except:
+            ano_atu, mes_atu, dia_atu = 2026, 1, 1
+
+          st.markdown("**Editar Data (DD/MM/AAAA)**")
+          c_ed1, c_ed2, c_ed3 = st.columns(3)
+          with c_ed1:
+            e_dia = st.selectbox("Dia", list(range(1, 32)), index=dia_atu - 1, key=f"ed_d_{ev_id}")
+          with c_ed2:
+            e_mes = st.selectbox("Mês", list(range(1, 13)), index=mes_atu - 1, key=f"ed_m_{ev_id}", format_func=lambda x: f"{x:02d}")
+          with c_ed3:
+            e_ano = st.selectbox("Ano", [2026, 2027, 2028], index=0, key=f"ed_a_{ev_id}")
+
+          e_stat = st.selectbox("Status", ["Pendente", "Confirmado", "Cancelado"], index=["Pendente", "Confirmado", "Cancelado"].index(ev.get("status", "Pendente")), key=f"s_{ev_id}")
+          
+          col_ev1, col_ev2 = st.columns(2)
+          with col_ev1:
+            e_vloc = st.number_input("Valor Locação (R$)", value=float(ev.get("valor_locacao", 0)), step=50.0, key=f"vl_{ev_id}")
+          with col_ev2:
+            e_vsinal = st.number_input("Valor do Sinal (R$)", value=float(ev.get("valor_sinal", 0)), step=50.0, key=f"vs_{ev_id}")
+
+          col_op_ed1, col_op_ed2 = st.columns(2)
+          with col_op_ed1:
+            e_vsom = st.number_input("Caixa de Som (R$)", value=float(ev.get("valor_som", 0)), step=10.0, key=f"vsom_{ev_id}")
+          with col_op_ed2:
+            idx_cuid = 0 if ev.get("taxa_cuidador", False) else 1
+            e_tcuid_str = st.selectbox("Cuidador da festa?", ["Sim", "Não"], index=idx_cuid, key=f"tcuid_{ev_id}")
+            e_tcuid = True if e_tcuid_str == "Sim" else False
+
+          e_sinal_pago = st.checkbox("Sinal Pago?", value=bool(ev.get("sinal_pago", False)), key=f"sp_{ev_id}")
+
+          if st.button("💾 Salvar Alterações", key=f"sv_{ev_id}"):
+            nova_data_str = f"{e_ano}-{int(e_mes):02d}-{int(e_dia):02d}"
+            for item in reservas:
+              if item.get("id") == ev_id:
+                item["cliente"] = e_cli
+                item["telefone"] = e_tel
+                item["date"] = nova_data_str
+                item["status"] = e_stat
+                item["valor_locacao"] = float(e_vloc)
+                item["valor_sinal"] = float(e_vsinal)
+                item["valor_som"] = float(e_vsom)
+                item["taxa_cuidador"] = e_tcuid
+                item["sinal_pago"] = e_sinal_pago
+                break
+            if salvar_dados_nuvem(reservas):
+              st.session_state[f"edit_mode_{ev_id}"] = False
+              st.success("Atualizado com sucesso!")
+              st.rerun()
+  else:
+    st.info("Nenhuma locação cadastrada no momento.")

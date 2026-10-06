@@ -85,6 +85,8 @@
         "sinal_pago": true,
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
-        "observacoes": ""
+        "observacoes": "",
+        "unidade": "Salão Principal",
+        "valor_locacao": 1080.0
     }
 ]

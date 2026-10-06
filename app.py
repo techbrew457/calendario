@@ -39,7 +39,6 @@ st.markdown(
         padding: 2px 4px !important;
         border-radius: 4px !important;
     }
-    /* Estilização de Cards */
     div.stButton > button {
         border-radius: 6px;
         font-weight: 600;
@@ -98,6 +97,7 @@ def salvar_dados_nuvem(reservas):
   return True
 
 
+# Funções de Conversão de Data (DD/MM/AAAA <-> AAAA-MM-DD)
 def formatar_data_br(data_str):
   try:
     if not data_str:
@@ -117,8 +117,9 @@ reservas, _ = carregar_dados_nuvem()
 UNIDADES_SALAO = ["Salão Principal", "Salão Master", "Espaço Externo / Quiosque"]
 ESTILOS_CHOPP = [
     "Pilsen", "IPA", "Stout", "Bohemian Pilsener", 
-    "Premium Golden", "APA", "Vinho", "Red Ale", "Nenhum"
+    "Premium Golden", "APA", "Vinho", "Red Ale"
 ]
+TAMANHOS_BARRIL = [15, 30, 50]
 
 # --- MENU LATERAL (NAVEGAÇÃO E FILTROS) ---
 with st.sidebar:
@@ -161,7 +162,13 @@ if menu == "📊 Dashboard & Métricas":
   
   faturamento_projetado = sum(float(e.get("valor_locacao", 0)) for e in eventos_filtrados if e.get("status") != "Cancelado")
   sinais_recebidos = sum(float(e.get("valor_sinal", 0)) for e in eventos_filtrados if e.get("sinal_pago", False))
-  total_chopp_litros = sum(int(e.get("qtd_chopp", 0)) for e in eventos_filtrados if e.get("status") != "Cancelado")
+  
+  # Soma total de litros de chopp de todos os barris cadastrados
+  total_chopp_litros = 0
+  for e in eventos_filtrados:
+    if e.get("status") != "Cancelado":
+      for b in e.get("barris", []):
+        total_chopp_litros += int(b.get("litros", 0))
 
   c1, c2, c3, c4 = st.columns(4)
   c1.metric("Total de Reservas", total_locacoes)
@@ -206,15 +213,20 @@ elif menu == "📅 Calendário Geral":
     if st_ev == "Confirmado":
       cor, icone = "#28a745", "✅ [Locado]"
     elif st_ev == "Cancelado":
-      cor, icone = "#dc3545", "❌ [Cancel."
+      cor, icone = "#dc3545", "❌ [Cancel.]"
     else:
-      cor, icone = "#ffc107", "⏳ [Negoc."
+      cor, icone = "#ffc107", "⏳ [Negoc.]"
 
     sinal_txt = "Sinal OK" if ev.get("sinal_pago") else "Sinal Pendente"
     unidade_sigla = f"[{ev.get('unidade', 'Salão')[:3]}]"
-    chopp_str = f" | 🍺 {ev.get('qtd_chopp')}L" if int(ev.get('qtd_chopp', 0)) > 0 else ""
     
-    titulo = f"{unidade_sigla} {icone} {ev.get('cliente')} - {ev.get('turno')} ({sinal_txt}){chopp_str}"
+    # Resumo de barris de chopp
+    barris = ev.get("barris", [])
+    total_litros_ev = sum(int(b.get("litros", 0)) for b in barris)
+    chopp_str = f" | 🍺 {total_litros_ev}L" if total_litros_ev > 0 else ""
+    
+    data_br_cal = formatar_data_br(ev.get("date"))
+    titulo = f"{unidade_sigla} {icone} {data_br_cal} - {ev.get('cliente')} ({sinal_txt}){chopp_str}"
 
     calendar_events.append({
         "title": titulo,
@@ -234,11 +246,11 @@ elif menu == "📅 Calendário Geral":
 
 
 # ==========================================
-# 3. NOVA LOCAÇÃO (FORMULÁRIO MOBILE-FIRST)
+# 3. NOVA LOCAÇÃO (COM MÚLTIPLOS BARRIS)
 # ==========================================
 elif menu == "➕ Nova Locação":
   st.title("📝 Registrar Nova Locação ou Negociação")
-  st.markdown("Preencha os campos abaixo de forma rápida pelo celular.")
+  st.markdown("Preencha os dados e adicione quantos barris de chopp precisar.")
 
   with st.form("form_nova_locacao", clear_on_submit=True):
     col_u1, col_u2 = st.columns(2)
@@ -249,9 +261,35 @@ elif menu == "➕ Nova Locação":
       documento = st.text_input("CPF ou CNPJ")
     with col_u2:
       tipo_evento = st.text_input("Tipo de Evento (Ex: Aniversário, Casamento)")
-      data_evento = st.date_input("Data do Evento")
+      data_evento = st.date_input("Data do Evento (DD/MM/AAAA)")
       turno = st.selectbox("Turno", ["Manhã", "Tarde", "Noite", "Dia Inteiro"])
       qtd_pessoas = st.number_input("Headcount (Pessoas)", min_value=1, value=50, step=1)
+
+    st.divider()
+    st.subheader("🍺 Gestão de Múltiplos Barris de Chopp Koch")
+    st.markdown("Configure abaixo os barris solicitados para o evento:")
+
+    # Criação de campos para até 4 barris diretamente no formulário
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+      st.markdown("**Barril 1**")
+      estilo_1 = st.selectbox("Estilo 1", ["Nenhum"] + ESTILOS_CHOPP, key="e1")
+      litros_1 = st.selectbox("Tamanho 1", [0, 15, 30, 50], index=2, key="t1") # Padrão 30L
+
+      st.markdown("**Barril 3**")
+      estilo_3 = st.selectbox("Estilo 3", ["Nenhum"] + ESTILOS_CHOPP, key="e3")
+      litros_3 = st.selectbox("Tamanho 3", [0, 15, 30, 50], index=0, key="t3")
+
+    with col_b2:
+      st.markdown("**Barril 2**")
+      estilo_2 = st.selectbox("Estilo 2", ["Nenhum"] + ESTILOS_CHOPP, key="e2")
+      litros_2 = st.selectbox("Tamanho 2", [0, 15, 30, 50], index=0, key="t2")
+
+      st.markdown("**Barril 4**")
+      estilo_4 = st.selectbox("Estilo 4", ["Nenhum"] + ESTILOS_CHOPP, key="e4")
+      litros_4 = st.selectbox("Tamanho 4", [0, 15, 30, 50], index=0, key="t4")
+
+    preco_medio_litro = st.number_input("Preço Médio por Litro de Chopp (R$)", min_value=0.0, value=15.0, step=1.0, format="%.2f")
 
     st.divider()
     st.subheader("💰 Comercial e Valores")
@@ -269,16 +307,6 @@ elif menu == "➕ Nova Locação":
     with col_v5:
       sinal_pago = st.checkbox("50% de Sinal Já Foi Pago?")
 
-    st.divider()
-    st.subheader("🍺 Opcionais de Chopp Koch & Extras")
-    col_c1, col_c2, col_c3 = st.columns(3)
-    with col_c1:
-      qtd_chopp = st.number_input("Volume Chopp (Litros)", min_value=0, value=0, step=10)
-    with col_c2:
-      preco_litro = st.number_input("Preço por Litro (R$)", min_value=0.0, value=15.0, step=1.0, format="%.2f")
-    with col_c3:
-      estilo_chopp = st.selectbox("Estilo de Chopp", ESTILOS_CHOPP)
-
     observacoes = st.text_area("Observações Específicas / Acordos")
 
     submitted = st.form_submit_button("💾 Salvar Nova Locação na Nuvem")
@@ -286,6 +314,12 @@ elif menu == "➕ Nova Locação":
       if not cliente.strip():
         st.warning("⚠️ O nome do cliente é obrigatório.")
       else:
+        # Montar lista de barris ativos
+        lista_barris = []
+        for est, lit in [(estilo_1, litros_1), (estilo_2, litros_2), (estilo_3, litros_3), (estilo_4, litros_4)]:
+          if est != "Nenhum" and lit > 0:
+            lista_barris.append({"estilo": est, "litros": int(lit)})
+
         novo_id = str(int(datetime.now().timestamp()))
         nova_reserva = {
             "id": novo_id,
@@ -302,9 +336,8 @@ elif menu == "➕ Nova Locação":
             "valor_locacao": float(valor_locacao),
             "valor_sinal": float(valor_sinal),
             "valor_caucao": float(valor_caucao),
-            "qtd_chopp": int(qtd_chopp),
-            "preco_litro_chopp": float(preco_litro),
-            "estilo_chopp": estilo_chopp,
+            "barris": lista_barris,
+            "preco_litro_chopp": float(preco_medio_litro),
             "observacoes": observacoes,
         }
         reservas.append(nova_reserva)
@@ -314,7 +347,7 @@ elif menu == "➕ Nova Locação":
 
 
 # ==========================================
-# 4. LISTA & GESTÃO (COM GERADOR DE CONTRATO)
+# 4. LISTA & GESTÃO (COM FORMATO DD/MM/AAAA)
 # ==========================================
 elif menu == "📋 Lista & Gestão":
   st.title("📋 Gerenciamento de Locações")
@@ -342,7 +375,7 @@ elif menu == "📋 Lista & Gestão":
       with st.container(border=True):
         col_i1, col_i2 = st.columns([3, 1])
         with col_i1:
-          st.markdown(f"**{emoji} [{ev.get('unidade')}] {data_formatada} - {ev.get('cliente')}**")
+          st.markdown(f"**{emoji} [{ev.get('unidade')}] Data: {data_formatada} - {ev.get('cliente')}**")
           st.caption(f"Turno: **{ev.get('turno')}** | Evento: {ev.get('tipo_evento', 'Geral')} | Status: **{st_ev}**")
           
           # Acesso Direto ao WhatsApp
@@ -351,8 +384,17 @@ elif menu == "📋 Lista & Gestão":
             st.markdown(f"[💬 Abrir Conversa no WhatsApp](https://wa.me/55{tel})")
           
           v_loc = float(ev.get("valor_locacao", 0))
-          chopp_v = int(ev.get("qtd_chopp", 0)) * float(ev.get("preco_litro_chopp", 0))
-          st.text(f"Locação: R$ {v_loc:,.2f} | Chopp: {ev.get('qtd_chopp')}L ({ev.get('estilo_chopp')}) - R$ {chopp_v:,.2f}")
+          
+          # Detalhes dos Barris de Chopp
+          barris = ev.get("barris", [])
+          if not barris and ev.get("qtd_chopp"): # Compatibilidade com registros antigos
+            barris = [{"estilo": ev.get("estilo_chopp", "Pilsen"), "litros": ev.get("qtd_chopp")}]
+          
+          desc_barris = ", ".join([f"{b['litros']}L {b['estilo']}" for b in barris]) if barris else "Nenhum chopp"
+          total_litros = sum(int(b.get("litros", 0)) for b in barris)
+          v_chopp = total_litros * float(ev.get("preco_litro_chopp", 15.0))
+
+          st.text(f"Locação: R$ {v_loc:,.2f} | Chopp: {desc_barris} (R$ {v_chopp:,.2f})")
 
         with col_i2:
           btn_edit = st.button("✏️ Editar", key=f"ed_{ev_id}", use_container_width=True)
@@ -365,10 +407,13 @@ elif menu == "📋 Lista & Gestão":
             st.success("Reserva excluída com sucesso!")
             st.rerun()
 
-        # GERAR ESBOÇO DE CONTRATO
+        # GERAR ESBOÇO DE CONTRATO COM DATA DD/MM/AAAA
         if btn_contrato:
           st.divider()
           st.markdown("### 📄 Esboço de Contrato de Locação")
+          
+          texto_barris_contrato = "\n".join([f"- {b['litros']} litros de Chopp estilo {b['estilo']}" for b in barris]) if barris else "Nenhum opcional de chopp."
+
           contrato_texto = f"""
 CONTRATO DE LOCAÇÃO TEMPORÁRIA DE SALÃO DE FESTAS
 CONTRATANTE: {ev.get('cliente')} | Documento: {ev.get('documento', 'Não informado')} | Tel/WhatsApp: {ev.get('telefone')}
@@ -380,12 +425,15 @@ HEADCOUNT: {ev.get('qtd_pessoas')} pessoas
 CLÁUSULA PRIMEIRA - VALORES E FORMA DE PAGAMENTO:
 O valor total ajustado para a locação é de R$ {float(ev.get('valor_locacao', 0)):,.2f}, sendo devido um sinal de 50% no valor de R$ {float(ev.get('valor_sinal', 0)):,.2f}. 
 Caução de garantia estipulada em R$ {float(ev.get('valor_caucao', 0)):,.2f}.
-Opcional de Chopp: {ev.get('qtd_chopp')} litros de chopp estilo {ev.get('estilo_chopp')}.
 
-CLÁUSULA SEGUNDA - OBSERVAÇÕES:
+CLÁUSULA SEGUNDA - FORNECIMENTO DE CHOPP KOCH:
+Opcionais contratados:
+{texto_barris_contrato}
+
+CLÁUSULA TERCEIRA - OBSERVAÇÕES:
 {ev.get('observacoes', 'Nenhuma observação específica registrada.')}
           """
-          st.text_area("Copie o contrato abaixo para enviar ao cliente:", contrato_texto, height=200)
+          st.text_area("Copie o contrato abaixo para enviar ao cliente:", contrato_texto, height=220)
 
         # PAINEL DE EDIÇÃO RÁPIDA
         if btn_edit:
@@ -398,10 +446,16 @@ CLÁUSULA SEGUNDA - OBSERVAÇÕES:
           e_unidade = st.selectbox("Unidade", UNIDADES_SALAO, index=UNIDADES_SALAO.index(ev.get("unidade", UNIDADES_SALAO[0])) if ev.get("unidade") in UNIDADES_SALAO else 0, key=f"u_{ev_id}")
           e_cli = st.text_input("Cliente", value=ev.get("cliente", ""), key=f"c_{ev_id}")
           e_tel = st.text_input("WhatsApp", value=ev.get("telefone", ""), key=f"t_{ev_id}")
+          
+          try:
+            data_obj_atual = datetime.strptime(ev.get("date", "2026-01-01"), "%Y-%m-%d").date()
+          except:
+            data_obj_atual = datetime.now().date()
+          e_data = st.date_input("Data do Evento (DD/MM/AAAA)", value=data_obj_atual, key=f"d_{ev_id}")
+
           e_stat = st.selectbox("Status", ["Pendente", "Confirmado", "Cancelado"], index=["Pendente", "Confirmado", "Cancelado"].index(ev.get("status", "Pendente")), key=f"s_{ev_id}")
           e_sinal_pago = st.checkbox("Sinal Pago?", value=bool(ev.get("sinal_pago", False)), key=f"sp_{ev_id}")
           e_vloc = st.number_input("Valor Locação", value=float(ev.get("valor_locacao", 0)), step=50.0, key=f"vl_{ev_id}")
-          e_lchopp = st.number_input("Litros Chopp", value=int(ev.get("qtd_chopp", 0)), step=10, key=f"ch_{ev_id}")
 
           if st.button("💾 Salvar Alterações", key=f"sv_{ev_id}"):
             for item in reservas:
@@ -409,10 +463,10 @@ CLÁUSULA SEGUNDA - OBSERVAÇÕES:
                 item["unidade"] = e_unidade
                 item["cliente"] = e_cli
                 item["telefone"] = e_tel
+                item["date"] = str(e_data)
                 item["status"] = e_stat
                 item["sinal_pago"] = e_sinal_pago
                 item["valor_locacao"] = float(e_vloc)
-                item["qtd_chopp"] = int(e_lchopp)
                 break
             if salvar_dados_nuvem(reservas):
               st.session_state[f"edit_mode_{ev_id}"] = False

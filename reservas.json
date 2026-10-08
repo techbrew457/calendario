@@ -64,7 +64,7 @@
         "cliente": "Nathalia Bueno Luz",
         "telefone": "42998563943",
         "tipo_evento": "Outros",
-        "date": "2026-07-17",
+        "date": "2027-07-17",
         "turno": "Manhã",
         "qtd_pessoas": 100,
         "status": "Confirmado",
@@ -76,7 +76,7 @@
         "valor_locacao": 1080.0,
         "valor_sinal": 540.0,
         "valor_som": 20.0,
-        "taxa_cuidador": true,
+        "taxa_cuidador": false,
         "valor_retroprojetor": 0.0,
         "valor_taxa_adicional": 0.0,
         "barris": []

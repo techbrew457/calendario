@@ -53,7 +53,7 @@
         "date": "2026-12-26",
         "turno": "Dia Inteiro",
         "qtd_pessoas": 60,
-        "status": "Pendente",
+        "status": "Confirmado",
         "sinal_pago": false,
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
@@ -62,7 +62,7 @@
         "valor_sinal": 600.0,
         "valor_som": 0.0,
         "valor_retroprojetor": 0.0,
-        "taxa_cuidador": true,
+        "taxa_cuidador": false,
         "valor_taxa_adicional": 0.0,
         "barris": []
     },

@@ -57,7 +57,14 @@
         "sinal_pago": false,
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
-        "observacoes": ""
+        "observacoes": "",
+        "valor_locacao": 1200.0,
+        "valor_sinal": 600.0,
+        "valor_som": 0.0,
+        "valor_retroprojetor": 0.0,
+        "taxa_cuidador": true,
+        "valor_taxa_adicional": 0.0,
+        "barris": []
     },
     {
         "id": "1791230595",

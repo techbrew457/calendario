@@ -203,8 +203,7 @@ if menu == "📊 Dashboard & Métricas":
   pendentes = sum(1 for e in eventos_filtrados if e.get("status") == "Pendente")
   
   faturamento_projetado = sum(float(e.get("valor_locacao", 0)) for e in eventos_filtrados if e.get("status") != "Cancelado")
-  sinais_recebidos = sum(float(e.get("valor_sinal", 0)) for e in eventos_filtrados if e.get("sinal_pago", False))
-  
+  sinais_recebidos = sum(float(e.get("valor_sinal", 0) or 0) for e in eventos_filtrados if float(e.get("valor_sinal", 0) or 0) > 0 and e.get("status") != "Cancelado")
   total_chopp_litros = 0
   for e in eventos_filtrados:
     if e.get("status") != "Cancelado":

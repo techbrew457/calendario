@@ -60,20 +60,6 @@
         "observacoes": ""
     },
     {
-        "id": "1791230083",
-        "cliente": "BERNARDO GODOY",
-        "telefone": "42999809488",
-        "tipo_evento": "Aniversário",
-        "date": "2026-11-21",
-        "turno": "Manhã",
-        "qtd_pessoas": 50,
-        "status": "Pendente",
-        "sinal_pago": false,
-        "qtd_chopp": 0,
-        "estilo_chopp": "Bohemian Pilsener",
-        "observacoes": ""
-    },
-    {
         "id": "1791230595",
         "cliente": "Nathalia Bueno Luz",
         "telefone": "42998563943",

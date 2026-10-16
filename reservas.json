@@ -15,17 +15,30 @@
     },
     {
         "id": "3",
-        "cliente": "BRUNA ",
-        "telefone": "999564316",
+        "cliente": "VINÍCIUS SEBASTIÃO COIMBRA",
+        "telefone": "41984842318",
         "tipo_evento": "Casamento",
         "date": "2026-11-21",
         "turno": "Dia Inteiro",
         "qtd_pessoas": 60,
-        "status": "Pendente",
+        "status": "Confirmado",
         "sinal_pago": false,
         "qtd_chopp": 0,
         "estilo_chopp": "Bohemian Pilsener",
-        "observacoes": ""
+        "observacoes": "",
+        "valor_locacao": 1800.0,
+        "valor_sinal": 900.0,
+        "valor_som": 0.0,
+        "valor_retroprojetor": 0.0,
+        "taxa_cuidador": true,
+        "valor_taxa_adicional": 0.0,
+        "barris": [
+            {
+                "estilo": "Pilsen",
+                "litros": 30,
+                "valor_total": 330.0
+            }
+        ]
     },
     {
         "id": "1791230027",

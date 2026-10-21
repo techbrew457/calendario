@@ -103,5 +103,26 @@
         "valor_taxa_adicional": 0.0,
         "barris": [],
         "observacoes": ""
+    },
+    {
+        "id": "1792605647",
+        "cliente": "WAGNER KLOSTER",
+        "telefone": "42999074700",
+        "documento": "",
+        "tipo_evento": "CASAMENTO",
+        "date": "2026-10-21",
+        "turno": "Manhã",
+        "qtd_pessoas": 30,
+        "status": "Pendente",
+        "sinal_pago": false,
+        "valor_locacao": 1200.0,
+        "valor_sinal": 600.0,
+        "valor_caucao": 200.0,
+        "valor_som": 0.0,
+        "valor_retroprojetor": 0.0,
+        "taxa_cuidador": false,
+        "valor_taxa_adicional": 0.0,
+        "barris": [],
+        "observacoes": ""
     }
 ]

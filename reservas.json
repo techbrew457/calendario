@@ -82,5 +82,26 @@
         "valor_retroprojetor": 0.0,
         "valor_taxa_adicional": 0.0,
         "barris": []
+    },
+    {
+        "id": "1792605557",
+        "cliente": "RAISSA LUANA",
+        "telefone": "42988162041",
+        "documento": "",
+        "tipo_evento": "ANIVERSARIO 4 ANOS FILHO",
+        "date": "2027-01-24",
+        "turno": "Manhã",
+        "qtd_pessoas": 100,
+        "status": "Pendente",
+        "sinal_pago": false,
+        "valor_locacao": 1200.0,
+        "valor_sinal": 600.0,
+        "valor_caucao": 0.0,
+        "valor_som": 0.0,
+        "valor_retroprojetor": 0.0,
+        "taxa_cuidador": false,
+        "valor_taxa_adicional": 0.0,
+        "barris": [],
+        "observacoes": ""
     }
 ]

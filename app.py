@@ -476,309 +476,205 @@ elif menu == "➕ Nova Locação":
 # ==========================================
 # 4. LISTA & GESTÃO
 # ==========================================
-elif menu == "📋 Lista & Gestão":
-  st.title("📋 Gerenciamento de Locações")
-  st.markdown("Consulte, edite status, abra o WhatsApp direto ou gere o contrato em Word.")
+if st.session_state.get(f"edit_mode_{ev_id}", False):
+                    st.divider()
+                    st.markdown(f"**Editando Completo: {ev.get('cliente')}**")
+                    
+                    with st.form(f"form_edit_{ev_id}"):
+                        e_cli = st.text_input("Cliente", value=ev.get("cliente", ""), key=f"c_{ev_id}")
+                        e_tel = st.text_input("WhatsApp", value=ev.get("telefone", ""), key=f"t_{ev_id}")
+                        e_doc = st.text_input("CPF ou CNPJ", value=ev.get("documento", ""), key=f"doc_{ev_id}")
+                        e_tipo_evento = st.text_input("Tipo de Evento", value=ev.get("tipo_evento", ""), key=f"te_{ev_id}")
+                        
+                        turnos_opcoes = ["Manhã", "Tarde", "Noite", "Dia Inteiro"]
+                        turno_atual = ev.get("turno", "Noite")
+                        idx_turno = turnos_opcoes.index(turno_atual) if turno_atual in turnos_opcoes else 0
+                        e_turno = st.selectbox("Turno", turnos_opcoes, index=idx_turno, key=f"tur_{ev_id}")
 
-  if eventos_filtrados:
-    col_b1, col_b2 = st.columns(2)
-    with col_b1:
-      filtro_status_lst = st.selectbox("Filtrar por Status", ["Todos", "Confirmado", "Pendente", "Cancelado"])
-    with col_b2:
-      busca_texto = st.text_input("🔍 Buscar por Cliente", "")
+                        e_qtd_pes = st.number_input("Qtdade de Pessoas", min_value=1, value=int(ev.get("qtd_pessoas", 50)), step=1, key=f"qp_{ev_id}")
+                        
+                        try:
+                            partes_dt = ev.get("date", "2026-01-01").split("-")
+                            ano_atu, mes_atu, dia_atu = int(partes_dt[0]), int(partes_dt[1]), int(partes_dt[2])
+                        except Exception:
+                            ano_atu, mes_atu, dia_atu = 2026, 1, 1
 
-    lista_exibicao = eventos_filtrados
-    if filtro_status_lst != "Todos":
-      lista_exibicao = [e for e in lista_exibicao if e.get("status") == filtro_status_lst]
-    if busca_texto.strip():
-      lista_exibicao = [e for e in lista_exibicao if busca_texto.lower() in e.get("cliente", "").lower()]
+                        st.markdown("**Editar Data (DD/MM/AAAA)**")
+                        c_ed1, c_ed2, c_ed3 = st.columns(3)
+                        with c_ed1:
+                            e_dia = st.selectbox("Dia", list(range(1, 32)), index=dia_atu - 1, key=f"ed_dia_{ev_id}")
+                        with c_ed2:
+                            e_mes = st.selectbox("Mês", list(range(1, 13)), index=mes_atu - 1, format_func=lambda x: f"{x:02d}", key=f"ed_mes_{ev_id}")
+                        with c_ed3:
+                            e_ano = st.selectbox("Ano", [2026, 2027, 2028], index=0, key=f"ed_ano_{ev_id}")
 
-    for ev in sorted(lista_exibicao, key=lambda x: x["date"]):
-      ev_id = ev.get("id")
-      st_ev = ev.get("status", "Pendente")
-      emoji = "✅" if st_ev == "Confirmado" else ("❌" if st_ev == "Cancelado" else "⏳")
-      data_formatada = formatar_data_br(ev.get("date"))
+                        status_lista = ["Pendente", "Confirmado", "Cancelado"]
+                        idx_status = status_lista.index(ev.get("status", "Pendente")) if ev.get("status") in status_lista else 0
+                        e_stat = st.selectbox("Status", status_lista, index=idx_status, key=f"s_{ev_id}")
+                        
+                        col_ev1, col_ev2, col_ev3 = st.columns(3)
+                        with col_ev1:
+                            e_vloc = st.number_input("Valor Locação (R$)", value=float(ev.get("valor_locacao", 0)), step=50.0, key=f"vl_{ev_id}")
+                        with col_ev2:
+                            e_vsinal = st.number_input("Valor do Sinal (R$)", value=float(ev.get("valor_sinal", 0)), step=50.0, key=f"vs_{ev_id}")
+                        with col_ev3:
+                            e_vcaucao = st.number_input("Valor Caução (R$)", value=float(ev.get("valor_caucao", 0)), step=50.0, key=f"vc_{ev_id}")
 
-      with st.container(border=True):
-        col_i1, col_i2 = st.columns([3, 1])
-        with col_i1:
-          st.markdown(f"**{emoji} Data: {data_formatada} - {ev.get('cliente')}**")
-          st.caption(f"Turno: **{ev.get('turno')}** | Evento: {ev.get('tipo_evento', 'Festividade')} | Qtdade de Pessoas: {ev.get('qtd_pessoas', 0)} | Status: **{st_ev}**")
-          
-          tel = ev.get("telefone", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-          if tel:
-            st.markdown(f"[💬 Abrir Conversa no WhatsApp](https://wa.me/55{tel})")
-          
-          v_loc = float(ev.get("valor_locacao", 0))
-          v_sinal_cadastrado = float(ev.get("valor_sinal", 0))
-          sinal_pago_status = "Pago ✅" if ev.get("sinal_pago") else "Pendente ⏳"
-          
-          barris = ev.get("barris", [])
-          if not barris and ev.get("qtd_chopp"):
-            barris = [{"estilo": ev.get("estilo_chopp", "Pilsen"), "litros": ev.get("qtd_chopp"), "valor_total": int(ev.get("qtd_chopp", 0)) * float(ev.get("preco_litro_chopp", 15.0))}]
-          
-          desc_barris = ", ".join([f"{b['litros']}L {b['estilo']} (R$ {float(b.get('valor_total', 0)):,.2f})" for b in barris]) if barris else "Nenhum chopp"
-          v_chopp_total = sum(float(b.get("valor_total", 0)) for b in barris)
+                        st.markdown("---")
+                        st.subheader("🔊 Opcionais")
+                        c_op_e1, c_op_e2 = st.columns(2)
+                        with c_op_e1:
+                            idx_som = 0 if ev.get("som_sn") == "Sim" else 1
+                            e_som_sn = st.selectbox("Caixa de Som?", ["Não", "Sim"], index=idx_som, key=f"e_som_sn_{ev_id}")
+                            e_vsom = st.number_input("Valor Som", value=float(ev.get("valor_som", 0)), step=10.0, key=f"e_vsom_{ev_id}")
+                            idx_cuid = 0 if ev.get("cuidador_sn") == "Sim" else 1
+                            e_cuid_sn = st.selectbox("Monitor / Cuidador?", ["Não", "Sim"], index=idx_cuid, key=f"e_cuid_sn_{ev_id}")
+                        with c_op_e2:
+                            idx_retro = 0 if ev.get("retro_sn") == "Sim" else 1
+                            e_retro_sn = st.selectbox("Retroprojetor?", ["Não", "Sim"], index=idx_retro, key=f"e_retro_sn_{ev_id}")
+                            e_vretro = st.number_input("Valor Retroprojetor", value=float(ev.get("valor_retroprojetor", 0)), step=10.0, key=f"e_vretro_{ev_id}")
+                            e_vtaxa_adicional = st.number_input("Taxa Adicional", value=float(ev.get("valor_taxa_adicional", 0)), step=10.0, key=f"e_vtaxa_{ev_id}")
 
-          st.text(f"Locação: R$ {v_loc:,.2f} | Sinal: R$ {v_sinal_cadastrado:,.2f} ({sinal_pago_status})")
-          st.text(f"Som: {ev.get('som_sn', 'Não')} (R$ {float(ev.get('valor_som', 0)):,.2f}) | Retro: {ev.get('retro_sn', 'Não')} (R$ {float(ev.get('valor_retroprojetor', 0)):,.2f}) | Cuidador: {ev.get('cuidador_sn', 'Não')}")
-          st.text(f"Refris: {ev.get('refri_sn','Não')} ({ev.get('refri_marca','-')}) | Água Gás: {ev.get('aguag_sn','Não')} ({ev.get('aguag_marca','-')}) | Água Sem Gás: {ev.get('aguas_sn','Não')} ({ev.get('aguas_marca','-')}) | Suco: {ev.get('suco_sn','Não')} ({ev.get('suco_marca','-')})")
-          if ev.get('imp_desc'):
-            st.text(f"Item Extra ({ev.get('imp_desc')}): {ev.get('imp_sn','Não')} | Marca: {ev.get('imp_marca','-')} | R$ {float(ev.get('imp_val',0)):,.2f}")
-          st.text(f"Chopp: {desc_barris} | Total Chopp: R$ {v_chopp_total:,.2f}")
+                        st.markdown("---")
+                        st.subheader("🥤 Bebidas e Extras")
+                        c_be_e1, c_be_e2 = st.columns(2)
+                        with c_be_e1:
+                            e_refri_sn = st.selectbox("Refris?", ["Não", "Sim"], index=0 if ev.get("refri_sn")=="Sim" else 1, key=f"e_refri_sn_{ev_id}")
+                            e_refri_marca = st.text_input("Marca Refri", value=ev.get("refri_marca",""), key=f"e_refri_m_{ev_id}")
+                            e_refri_val = st.number_input("Valor Refri", value=float(ev.get("refri_val",0)), key=f"e_refri_v_{ev_id}")
 
-        with col_i2:
-          btn_edit = st.button("✏️ Editar", key=f"ed_{ev_id}", use_container_width=True)
-          btn_contrato = st.button("📄 Contrato", key=f"ct_{ev_id}", use_container_width=True)
-          btn_del = st.button("🗑️ Excluir", key=f"dl_{ev_id}", use_container_width=True)
+                            e_aguag_sn = st.selectbox("Água Gás Barril?", ["Não", "Sim"], index=0 if ev.get("aguag_sn")=="Sim" else 1, key=f"e_aguag_sn_{ev_id}")
+                            e_aguag_marca = st.text_input("Marca Água Gás", value=ev.get("aguag_marca",""), key=f"e_aguag_m_{ev_id}")
+                            e_aguag_val = st.number_input("Valor Água Gás", value=float(ev.get("aguag_val",0)), key=f"e_aguag_v_{ev_id}")
+                        with c_be_e2:
+                            e_aguas_sn = st.selectbox("Água Sem Gás?", ["Não", "Sim"], index=0 if ev.get("aguas_sn")=="Sim" else 1, key=f"e_aguas_sn_{ev_id}")
+                            e_aguas_marca = st.text_input("Marca Água Sem Gás", value=ev.get("aguas_marca",""), key=f"e_aguas_m_{ev_id}")
+                            e_aguas_val = st.number_input("Valor Água Sem Gás", value=float(ev.get("aguas_val",0)), key=f"e_aguas_v_{ev_id}")
 
-        if btn_del:
-          reservas = [r for r in reservas if r.get("id") != ev_id]
-          if salvar_dados_nuvem(reservas):
-            st.success("Reserva excluída com sucesso!")
-            st.rerun()
+                            e_suco_sn = st.selectbox("Suco Lata?", ["Não", "Sim"], index=0 if ev.get("suco_sn")=="Sim" else 1, key=f"e_suco_sn_{ev_id}")
+                            e_suco_marca = st.text_input("Marca Suco", value=ev.get("suco_marca",""), key=f"e_suco_m_{ev_id}")
+                            e_suco_val = st.number_input("Valor Suco", value=float(ev.get("suco_val",0)), key=f"e_suco_v_{ev_id}")
 
-        if btn_contrato:
-          st.divider()
-          st.markdown("### 📄 Geração de Contrato em Word (.docx)")
-          
-          texto_barris_contrato = "\n".join([f"- {b['litros']} litros de Chopp estilo {b['estilo']} - R$ {float(b.get('valor_total', 0)):,.2f}" for b in barris]) if barris else "Nenhum opcional de chopp."
-          
-          texto_op_parts = []
-          if ev.get("som_sn") == "Sim":
-            texto_op_parts.append(f"- Caixa de Som: R$ {float(ev.get('valor_som', 0)):,.2f}")
-          if ev.get("retro_sn") == "Sim":
-            texto_op_parts.append(f"- Retroprojetor: R$ {float(ev.get('valor_retroprojetor', 0)):,.2f}")
-          if ev.get("cuidador_sn") == "Sim":
-            texto_op_parts.append("- Monitor / Cuidador: Incluso")
-          if float(ev.get("valor_taxa_adicional", 0)) > 0:
-            texto_op_parts.append(f"- Taxa Adicional: R$ {float(ev.get('valor_taxa_adicional', 0)):,.2f}")
-          if ev.get("refri_sn") == "Sim":
-            texto_op_parts.append(f"- Refrigerantes em Consignação (Marca: {ev.get('refri_marca','-')}): R$ {float(ev.get('refri_val',0)):,.2f}")
-          if ev.get("aguag_sn") == "Sim":
-            texto_op_parts.append(f"- Água com Gás Barril (Marca: {ev.get('aguag_marca','-')}): R$ {float(ev.get('aguag_val',0)):,.2f}")
-          if ev.get("aguas_sn") == "Sim":
-            texto_op_parts.append(f"- Água Sem Gás Garrafa (Marca: {ev.get('aguas_marca','-')}): R$ {float(ev.get('aguas_val',0)):,.2f}")
-          if ev.get("suco_sn") == "Sim":
-            texto_op_parts.append(f"- Suco Lata (Marca: {ev.get('suco_marca','-')}): R$ {float(ev.get('suco_val',0)):,.2f}")
-          if ev.get("imp_sn") == "Sim" and ev.get("imp_desc"):
-            texto_op_parts.append(f"- Item Extra ({ev.get('imp_desc')} - Marca: {ev.get('imp_marca','-')}): R$ {float(ev.get('imp_val',0)):,.2f}")
+                        st.markdown("---")
+                        st.subheader("🛠️ Item Improvisado / Extra")
+                        c_im1, c_im2, c_im3, c_im4 = st.columns(4)
+                        with c_im1:
+                            e_imp_desc = st.text_input("Descrição", value=ev.get("imp_desc",""), key=f"e_imp_desc_{ev_id}")
+                        with c_im2:
+                            e_imp_sn = st.selectbox("Item Extra?", ["Não", "Sim"], index=0 if ev.get("imp_sn")=="Sim" else 1, key=f"e_imp_sn_{ev_id}")
+                        with c_im3:
+                            e_imp_marca = st.text_input("Marca Extra", value=ev.get("imp_marca",""), key=f"e_imp_marca_{ev_id}")
+                        with c_im4:
+                            e_imp_val = st.number_input("Valor Extra", value=float(ev.get("imp_val",0)), key=f"e_imp_val_{ev_id}")
 
-          texto_opcionais_contrato = "\n".join(texto_op_parts) if texto_op_parts else "Nenhum opcional contratado."
+                        st.markdown("---")
+                        st.subheader("🍺 Barris de Chopp Cadastrados")
+                        barris_atuais = ev.get("barris", [])
+                        b1_data = barris_atuais[0] if len(barris_atuais) > 0 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
+                        b2_data = barris_atuais[1] if len(barris_atuais) > 1 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
+                        b3_data = barris_atuais[2] if len(barris_atuais) > 2 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
+                        b4_data = barris_atuais[3] if len(barris_atuais) > 3 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
 
-          arquivo_docx = gerar_documento_word(ev, data_formatada, barris, texto_opcionais_contrato, texto_barris_contrato)
-          
-          if arquivo_docx:
-            nome_arquivo_download = f"Contrato_{ev.get('cliente').replace(' ', '_')}.docx"
-            st.download_button(
-                label="📥 Baixar Contrato em Word Preenchido",
-                data=arquivo_docx,
-                file_name=nome_arquivo_download,
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key=f"dl_docx_{ev_id}"
-            )
-          else:
-            st.warning("⚠️ O arquivo `modelo_contrato.docx` não foi encontrado no GitHub. Certifique-se de enviá-lo para a raiz do repositório.")
+                        opt_estilos = ["Nenhum"] + ESTILOS_CHOPP
+                        opt_litros = [0, 15, 30, 50]
 
-        if btn_edit:
-          st.session_state[f"edit_mode_{ev_id}"] = not st.session_state.get(f"edit_mode_{ev_id}", False)
+                        def get_idx_safe(lst, val):
+                            try:
+                                return lst.index(val)
+                            except Exception:
+                                return 0
 
-        if st.session_state.get(f"edit_mode_{ev_id}", False):
-          st.divider()
-          st.markdown(f"**Editando Completo: {ev.get('cliente')}**")
-          
-          e_cli = st.text_input("Cliente", value=ev.get("cliente", ""), key=f"c_{ev_id}")
-          e_tel = st.text_input("WhatsApp", value=ev.get("telefone", ""), key=f"t_{ev_id}")
-          e_doc = st.text_input("CPF ou CNPJ", value=ev.get("documento", ""), key=f"doc_{ev_id}")
-          e_tipo_evento = st.text_input("Tipo de Evento", value=ev.get("tipo_evento", ""), key=f"te_{ev_id}")
-          
-          turnos_opcoes = ["Manhã", "Tarde", "Noite", "Dia Inteiro"]
-          turno_atual = ev.get("turno", "Noite")
-          idx_turno = turnos_opcoes.index(turno_atual) if turno_atual in turnos_opcoes else 0
-          e_turno = st.selectbox("Turno", turnos_opcoes, index=idx_turno, key=f"tur_{ev_id}")
+                        col_eb1, col_eb2 = st.columns(2)
+                        with col_eb1:
+                            st.markdown("##### 🛢️ Barril 1")
+                            e_est_1 = st.selectbox("Estilo 1", opt_estilos, index=get_idx_safe(opt_estilos, b1_data.get("estilo", "Nenhum")), key=f"ee1_{ev_id}")
+                            e_lit_1 = st.selectbox("Tamanho 1", opt_litros, index=get_idx_safe(opt_litros, b1_data.get("litros", 0)), key=f"el1_{ev_id}")
+                            e_val_1 = st.number_input("Valor 1 (R$)", value=float(b1_data.get("valor_total", 0.0)), step=10.0, key=f"ev1_{ev_id}")
 
-          e_qtd_pes = st.number_input("Qtdade de Pessoas", min_value=1, value=int(ev.get("qtd_pessoas", 50)), step=1, key=f"qp_{ev_id}")
-          
-          try:
-            partes_dt = ev.get("date", "2026-01-01").split("-")
-            ano_atu, mes_atu, dia_atu = int(partes_dt[0]), int(partes_dt[1]), int(partes_dt[2])
-          except:
-            ano_atu, mes_atu, dia_atu = 2026, 1, 1
+                            st.markdown("##### 🛢️ Barril 3")
+                            e_est_3 = st.selectbox("Estilo 3", opt_estilos, index=get_idx_safe(opt_estilos, b3_data.get("estilo", "Nenhum")), key=f"ee3_{ev_id}")
+                            e_lit_3 = st.selectbox("Tamanho 3", opt_litros, index=get_idx_safe(opt_litros, b3_data.get("litros", 0)), key=f"el3_{ev_id}")
+                            e_val_3 = st.number_input("Valor 3 (R$)", value=float(b3_data.get("valor_total", 0.0)), step=10.0, key=f"ev3_{ev_id}")
 
-          st.markdown("**Editar Data (DD/MM/AAAA)**")
-          c_ed1, c_ed2, c_ed3 = st.columns(3)
-          with c_ed1:
-            e_dia = st.selectbox("Dia", list(range(1, 32)), index=dia_atu - 1, key=f"ed_d_{ev_id}")
-          with c_ed2:
-            e_mes = st.selectbox("Mês", list(range(1, 13)), index=mes_atu - 1, key=f"ed_m_{ev_id}", format_func=lambda x: f"{x:02d}")
-          with c_ed3:
-            e_ano = st.selectbox("Ano", [2026, 2027, 2028], index=0, key=f"ed_a_{ev_id}")
+                        with col_eb2:
+                            st.markdown("##### 🛢️ Barril 2")
+                            e_est_2 = st.selectbox("Estilo 2", opt_estilos, index=get_idx_safe(opt_estilos, b2_data.get("estilo", "Nenhum")), key=f"ee2_{ev_id}")
+                            e_lit_2 = st.selectbox("Tamanho 2", opt_litros, index=get_idx_safe(opt_litros, b2_data.get("litros", 0)), key=f"el2_{ev_id}")
+                            e_val_2 = st.number_input("Valor 2 (R$)", value=float(b2_data.get("valor_total", 0.0)), step=10.0, key=f"ev2_{ev_id}")
 
-          e_stat = st.selectbox("Status", ["Pendente", "Confirmado", "Cancelado"], index=["Pendente", "Confirmado", "Cancelado"].index(ev.get("status", "Pendente")), key=f"s_{ev_id}")
-          
-          col_ev1, col_ev2, col_ev3 = st.columns(3)
-          with col_ev1:
-            e_vloc = st.number_input("Valor Locação (R$)", value=float(ev.get("valor_locacao", 0)), step=50.0, key=f"vl_{ev_id}")
-          with col_ev2:
-            e_vsinal = st.number_input("Valor do Sinal (R$)", value=float(ev.get("valor_sinal", 0)), step=50.0, key=f"vs_{ev_id}")
-          with col_ev3:
-            e_vcaucao = st.number_input("Valor Caução (R$)", value=float(ev.get("valor_caucao", 0)), step=50.0, key=f"vc_{ev_id}")
+                            st.markdown("##### 🛢️ Barril 4")
+                            e_est_4 = st.selectbox("Estilo 4", opt_estilos, index=get_idx_safe(opt_estilos, b4_data.get("estilo", "Nenhum")), key=f"ee4_{ev_id}")
+                            e_lit_4 = st.selectbox("Tamanho 4", opt_litros, index=get_idx_safe(opt_litros, b4_data.get("litros", 0)), key=f"el4_{ev_id}")
+                            e_val_4 = st.number_input("Valor 4 (R$)", value=float(b4_data.get("valor_total", 0.0)), step=10.0, key=f"ev4_{ev_id}")
 
-          st.markdown("---")
-          st.subheader("🔊 Opcionais")
-          c_op_e1, c_op_e2 = st.columns(2)
-          with c_op_e1:
-            idx_som = 0 if ev.get("som_sn") == "Sim" else 1
-            e_som_sn = st.selectbox("Caixa de Som?", ["Não", "Sim"], index=idx_som, key=f"e_som_sn_{ev_id}")
-            e_vsom = st.number_input("Valor Som", value=float(ev.get("valor_som", 0)), step=10.0, key=f"e_vsom_{ev_id}")
-            idx_cuid = 0 if ev.get("cuidador_sn") == "Sim" else 1
-            e_cuid_sn = st.selectbox("Monitor / Cuidador?", ["Não", "Sim"], index=idx_cuid, key=f"e_cuid_sn_{ev_id}")
-          with c_op_e2:
-            idx_retro = 0 if ev.get("retro_sn") == "Sim" else 1
-            e_retro_sn = st.selectbox("Retroprojetor?", ["Não", "Sim"], index=idx_retro, key=f"e_retro_sn_{ev_id}")
-            e_vretro = st.number_input("Valor Retroprojetor", value=float(ev.get("valor_retroprojetor", 0)), step=10.0, key=f"e_vretro_{ev_id}")
-            e_vtaxa_adicional = st.number_input("Taxa Adicional", value=float(ev.get("valor_taxa_adicional", 0)), step=10.0, key=f"e_vtaxa_{ev_id}")
+                        e_obs = st.text_area("Observações", value=ev.get("observacoes", ""), key=f"obs_{ev_id}")
 
-          st.markdown("---")
-          st.subheader("🥤 Bebidas e Extras")
-          c_be_e1, c_be_e2 = st.columns(2)
-          with c_be_e1:
-            e_refri_sn = st.selectbox("Refris?", ["Não", "Sim"], index=0 if ev.get("refri_sn")=="Sim" else 1, key=f"e_refri_sn_{ev_id}")
-            e_refri_marca = st.text_input("Marca Refri", value=ev.get("refri_marca",""), key=f"e_refri_m_{ev_id}")
-            e_refri_val = st.number_input("Valor Refri", value=float(ev.get("refri_val",0)), key=f"e_refri_v_{ev_id}")
+                        btn_salvar_edicao = st.form_submit_button("💾 Salvar Alterações na Nuvem")
+                        if btn_salvar_edicao:
+                            if not e_cli.strip():
+                                st.warning("⚠️ O nome do cliente é obrigatório.")
+                            else:
+                                try:
+                                    # Monta a data formatada exata e atualiza a chave 'date'
+                                    nova_data_str = f"{int(e_ano)}-{int(e_mes):02d}-{int(e_dia):02d}"
+                                    datetime.strptime(nova_data_str, "%Y-%m-%d")
+                                except ValueError:
+                                    st.error("⚠️ Data inválida.")
+                                    st.stop()
 
-            e_aguag_sn = st.selectbox("Água Gás Barril?", ["Não", "Sim"], index=0 if ev.get("aguag_sn")=="Sim" else 1, key=f"e_aguag_sn_{ev_id}")
-            e_aguag_marca = st.text_input("Marca Água Gás", value=ev.get("aguag_marca",""), key=f"e_aguag_m_{ev_id}")
-            e_aguag_val = st.number_input("Valor Água Gás", value=float(ev.get("aguag_val",0)), key=f"e_aguag_v_{ev_id}")
-          with c_be_e2:
-            e_aguas_sn = st.selectbox("Água Sem Gás?", ["Não", "Sim"], index=0 if ev.get("aguas_sn")=="Sim" else 1, key=f"e_aguas_sn_{ev_id}")
-            e_aguas_marca = st.text_input("Marca Água Sem Gás", value=ev.get("aguas_marca",""), key=f"e_aguas_m_{ev_id}")
-            e_aguas_val = st.number_input("Valor Água Sem Gás", value=float(ev.get("aguas_val",0)), key=f"e_aguas_v_{ev_id}")
+                                novas_barris = []
+                                for est, lit, val in [
+                                    (e_est_1, e_lit_1, e_val_1),
+                                    (e_est_2, e_lit_2, e_val_2),
+                                    (e_est_3, e_lit_3, e_val_3),
+                                    (e_est_4, e_lit_4, e_val_4),
+                                ]:
+                                    if est != "Nenhum" and lit > 0:
+                                        novas_barris.append({"estilo": est, "litros": int(lit), "valor_total": float(val)})
 
-            e_suco_sn = st.selectbox("Suco Lata?", ["Não", "Sim"], index=0 if ev.get("suco_sn")=="Sim" else 1, key=f"e_suco_sn_{ev_id}")
-            e_suco_marca = st.text_input("Marca Suco", value=ev.get("suco_marca",""), key=f"e_suco_m_{ev_id}")
-            e_suco_val = st.number_input("Valor Suco", value=float(ev.get("suco_val",0)), key=f"e_suco_v_{ev_id}")
+                                for item in reservas:
+                                    if item.get("id") == ev_id:
+                                        item["cliente"] = e_cli
+                                        item["telefone"] = e_tel
+                                        item["documento"] = e_doc
+                                        item["tipo_evento"] = e_tipo_evento
+                                        item["date"] = nova_data_str  # <--- Atualização da nova data aqui!
+                                        item["turno"] = e_turno
+                                        item["qtd_pessoas"] = int(e_qtd_pes)
+                                        item["status"] = e_stat
+                                        item["valor_locacao"] = float(e_vloc)
+                                        item["valor_sinal"] = float(e_vsinal)
+                                        item["valor_caucao"] = float(e_vcaucao)
+                                        item["som_sn"] = e_som_sn
+                                        item["valor_som"] = float(e_vsom)
+                                        item["retro_sn"] = e_retro_sn
+                                        item["valor_retroprojetor"] = float(e_vretro)
+                                        item["cuidador_sn"] = e_cuid_sn
+                                        item["valor_taxa_adicional"] = float(e_vtaxa_adicional)
+                                        item["refri_sn"] = e_refri_sn
+                                        item["refri_marca"] = e_refri_marca
+                                        item["refri_val"] = float(e_refri_val)
+                                        item["aguag_sn"] = e_aguag_sn
+                                        item["aguag_marca"] = e_aguag_marca
+                                        item["aguag_val"] = float(e_aguag_val)
+                                        item["aguas_sn"] = e_aguas_sn
+                                        item["aguas_marca"] = e_aguas_marca
+                                        item["aguas_val"] = float(e_aguas_val)
+                                        item["suco_sn"] = e_suco_sn
+                                        item["suco_marca"] = e_suco_marca
+                                        item["suco_val"] = float(e_suco_val)
+                                        item["imp_desc"] = e_imp_desc
+                                        item["imp_sn"] = e_imp_sn
+                                        item["imp_marca"] = e_imp_marca
+                                        item["imp_val"] = float(e_imp_val)
+                                        item["barris"] = novas_barris
+                                        item["observacoes"] = e_obs
+                                        break
 
-          st.markdown("---")
-          st.subheader("🛠️ Item Improvisado / Extra")
-          c_im1, c_im2, c_im3, c_im4 = st.columns(4)
-          with c_im1:
-            e_imp_desc = st.text_input("Descrição", value=ev.get("imp_desc",""), key=f"e_imp_desc_{ev_id}")
-          with c_im2:
-            e_imp_sn = st.selectbox("Item Extra?", ["Não", "Sim"], index=0 if ev.get("imp_sn")=="Sim" else 1, key=f"e_imp_sn_{ev_id}")
-          with c_im3:
-            e_imp_marca = st.text_input("Marca Extra", value=ev.get("imp_marca",""), key=f"e_imp_marca_{ev_id}")
-          with c_im4:
-            e_imp_val = st.number_input("Valor Extra", value=float(ev.get("imp_val",0)), key=f"e_imp_val_{ev_id}")
-
-          st.markdown("---")
-          st.subheader("🍺 Barris de Chopp Cadastrados")
-          barris_atuais = ev.get("barris", [])
-          b1_data = barris_atuais[0] if len(barris_atuais) > 0 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
-          b2_data = barris_atuais[1] if len(barris_atuais) > 1 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
-          b3_data = barris_atuais[2] if len(barris_atuais) > 2 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
-          b4_data = barris_atuais[3] if len(barris_atuais) > 3 else {"estilo": "Nenhum", "litros": 0, "valor_total": 0.0}
-
-          opt_estilos = ["Nenhum"] + ESTILOS_CHOPP
-          opt_litros = [0, 15, 30, 50]
-
-          def get_idx_safe(lst, val):
-            try:
-              return lst.index(val)
-            except:
-              return 0
-
-          col_eb1, col_eb2 = st.columns(2)
-          with col_eb1:
-            st.markdown("##### 🛢️ Barril 1")
-            e_est_1 = st.selectbox("Estilo 1", opt_estilos, index=get_idx_safe(opt_estilos, b1_data.get("estilo", "Nenhum")), key=f"ee1_{ev_id}")
-            e_lit_1 = st.selectbox("Tamanho 1", opt_litros, index=get_idx_safe(opt_litros, b1_data.get("litros", 0)), key=f"et1_{ev_id}")
-            e_val_1 = st.number_input("Valor Barril 1 (R$)", value=float(b1_data.get("valor_total", 0)), step=10.0, format="%.2f", key=f"evb1_{ev_id}")
-
-            st.markdown("##### 🛢️ Barril 3")
-            e_est_3 = st.selectbox("Estilo 3", opt_estilos, index=get_idx_safe(opt_estilos, b3_data.get("estilo", "Nenhum")), key=f"ee3_{ev_id}")
-            e_lit_3 = st.selectbox("Tamanho 3", opt_litros, index=get_idx_safe(opt_litros, b3_data.get("litros", 0)), key=f"et3_{ev_id}")
-            e_val_3 = st.number_input("Valor Barril 3 (R$)", value=float(b3_data.get("valor_total", 0)), step=10.0, format="%.2f", key=f"evb3_{ev_id}")
-
-          with col_eb2:
-            st.markdown("##### 🛢️ Barril 2")
-            e_est_2 = st.selectbox("Estilo 2", opt_estilos, index=get_idx_safe(opt_estilos, b2_data.get("estilo", "Nenhum")), key=f"ee2_{ev_id}")
-            e_lit_2 = st.selectbox("Tamanho 2", opt_litros, index=get_idx_safe(opt_litros, b2_data.get("litros", 0)), key=f"et2_{ev_id}")
-            e_val_2 = st.number_input("Valor Barril 2 (R$)", value=float(b2_data.get("valor_total", 0)), step=10.0, format="%.2f", key=f"evb2_{ev_id}")
-
-            st.markdown("##### 🛢️ Barril 4")
-            e_est_4 = st.selectbox("Estilo 4", opt_estilos, index=get_idx_safe(opt_estilos, b4_data.get("estilo", "Nenhum")), key=f"ee4_{ev_id}")
-            e_lit_4 = st.selectbox("Tamanho 4", opt_litros, index=get_idx_safe(opt_litros, b4_data.get("litros", 0)), key=f"et4_{ev_id}")
-            e_val_4 = st.number_input("Valor Barril 4 (R$)", value=float(b4_data.get("valor_total", 0)), step=10.0, format="%.2f", key=f"evb4_{ev_id}")
-
-          e_sinal_pago = st.checkbox("Sinal Pago?", value=bool(ev.get("sinal_pago", False)), key=f"sp_{ev_id}")
-          e_observacoes = st.text_area("Observações Específicas / Acordos", value=ev.get("observacoes", ""), key=f"obs_{ev_id}")
-
-          if st.button("💾 Salvar Alterações na Nuvem", key=f"sv_{ev_id}"):
-            nova_data_str = f"{e_ano}-{int(e_mes):02d}-{int(e_dia):02d}"
-            
-            novos_barris = []
-            for est, lit, val in [
-                (e_est_1, e_lit_1, e_val_1),
-                (e_est_2, e_lit_2, e_val_2),
-                (e_est_3, e_lit_3, e_val_3),
-                (e_est_4, e_lit_4, e_val_4),
-            ]:
-              if est != "Nenhum" and lit > 0:
-                novos_barris.append({"estilo": est, "litros": int(lit), "valor_total": float(val)})
-
-            for item in reservas:
-              if item.get("id") == ev_id:
-                item["cliente"] = e_cli
-                item["telefone"] = e_tel
-                item["documento"] = e_doc
-                item["tipo_evento"] = e_tipo_evento
-                item["turno"] = e_turno
-                item["qtd_pessoas"] = int(e_qtd_pes)
-                item["date"] = nova_data_str
-                item["status"] = e_stat
-                item["valor_locacao"] = float(e_vloc)
-                item["valor_sinal"] = float(e_vsinal)
-                item["valor_caucao"] = float(e_vcaucao)
-                
-                item["som_sn"] = e_som_sn
-                item["valor_som"] = float(e_vsom)
-                item["retro_sn"] = e_retro_sn
-                item["valor_retroprojetor"] = float(e_vretro)
-                item["cuidador_sn"] = e_cuid_sn
-                item["valor_taxa_adicional"] = float(e_vtaxa_adicional)
-                
-                item["refri_sn"] = e_refri_sn
-                item["refri_marca"] = e_refri_marca
-                item["refri_val"] = float(e_refri_val)
-
-                item["aguag_sn"] = e_aguag_sn
-                item["aguag_marca"] = e_aguag_marca
-                item["aguag_val"] = float(e_aguag_val)
-
-                item["aguas_sn"] = e_aguas_sn
-                item["aguas_marca"] = e_aguas_marca
-                item["aguas_val"] = float(e_aguas_val)
-
-                item["suco_sn"] = e_suco_sn
-                item["suco_marca"] = e_suco_marca
-                item["suco_val"] = float(e_suco_val)
-
-                item["imp_desc"] = e_imp_desc
-                item["imp_sn"] = e_imp_sn
-                item["imp_marca"] = e_imp_marca
-                item["imp_val"] = float(e_imp_val)
-
-                item["barris"] = novos_barris
-                item["sinal_pago"] = e_sinal_pago
-                item["observacoes"] = e_observacoes
-                break
-            if salvar_dados_nuvem(reservas):
-              st.session_state[f"edit_mode_{ev_id}"] = False
-              st.success("Atualizado com sucesso!")
-              st.rerun()
-  else:
-    st.info("Nenhuma locação cadastrada no momento.")
+                                if salvar_dados_nuvem(reservas):
+                                    st.session_state[f"edit_mode_{ev_id}"] = False
+                                    st.success("✅ Alterações e data salvas com sucesso!")
+                                    st.rerun()
 
 
 # ==========================================

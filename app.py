@@ -32,14 +32,11 @@ def carregar_reservas_github():
             import base64
             file_content = base64.b64decode(content["content"]).decode("utf-8")
             dados = json.loads(file_content)
-            # Armazena o sha necessário para atualizações futuras
             st.session_state["github_sha"] = content["sha"]
             return dados
         else:
-            st.error("⚠️ Não foi possível carregar as reservas do GitHub.")
             return []
-    except Exception as e:
-        st.error(f"Erro ao conectar com GitHub: {e}")
+    except Exception:
         return []
 
 def salvar_reservas_github(reservas):
@@ -66,18 +63,32 @@ def salvar_reservas_github(reservas):
             new_data = response.json()
             st.session_state["github_sha"] = new_data["content"]["sha"]
             return True
-        else:
-            st.error(f"Erro ao salvar no GitHub ({response.status_code}): {response.text}")
-            return False
-    except Exception as e:
-        st.error(f"Erro ao salvar alterações no GitHub: {e}")
+        return False
+    except Exception:
         return False
 
 # ==========================================
-# INICIALIZAÇÃO DE ESTADO
+# INICIALIZAÇÃO DE ESTADO E TRATAMENTO
 # ==========================================
-if "reservas" not in st.session_state:
+if "reservas" not in st.session_state or not st.session_state["reservas"]:
     st.session_state["reservas"] = carregar_reservas_github()
+
+# Garante IDs e campos padrão para evitar qualquer KeyError
+for idx, e in enumerate(st.session_state["reservas"]):
+    if not isinstance(e, dict):
+        continue
+    if "id" not in e:
+        e["id"] = f"res-{idx}"
+    if "cliente" not in e:
+        e["cliente"] = "Cliente sem nome"
+    if "data" not in e:
+        e["data"] = "2026-01-01"
+    if "valor_locacao" not in e:
+        e["valor_locacao"] = 0.0
+    if "valor_sinal" not in e:
+        e["valor_sinal"] = 0.0
+    if "status" not in e:
+        e["status"] = "Confirmado"
 
 # ==========================================
 # BARRA LATERAL (FILTROS)
@@ -96,14 +107,13 @@ meses_dict = {
 mes_nome_sel = st.sidebar.selectbox("Mês", list(meses_dict.keys()))
 mes_num_sel = meses_dict[mes_nome_sel]
 
-# Filtragem das reservas com base no menu lateral
 eventos_filtrados = []
 for ev in st.session_state["reservas"]:
     try:
-        dt = datetime.strptime(ev["data"], "%Y-%m-%d")
+        dt = datetime.strptime(str(ev.get("data")), "%Y-%m-%d")
         if dt.year == ano_sel and (mes_num_sel == 0 or dt.month == mes_num_sel):
             eventos_filtrados.append(ev)
-    except (ValueError, KeyError):
+    except Exception:
         continue
 
 # ==========================================
@@ -116,15 +126,13 @@ aba_dash, aba_gestao, aba_novo = st.tabs([
 ])
 
 # ------------------------------------------
-# ABA 1: DASHBOARD & MÉTRICAS
+# ABA 1: DASHBOARD
 # ------------------------------------------
 with aba_dash:
     st.header("📊 Resumo Financeiro e Eventos")
     
-    # Cálculos dinâmicos
     total_eventos = len(eventos_filtrados)
     
-    # Soma de Sinais Recebidos (Soma qualquer valor > 0 para eventos não cancelados)
     sinais_recebidos = sum(
         float(e.get("valor_sinal", 0) or 0) 
         for e in eventos_filtrados 
@@ -149,12 +157,12 @@ with aba_dash:
     st.subheader("Próximos Eventos no Período Selecionado")
     if eventos_filtrados:
         for ev in eventos_filtrados:
-            st.info(f"📅 **{ev['data']}** | 👤 **Cliente:** {ev['cliente']} | 💵 Locação: R$ {float(ev.get('valor_locacao', 0)):.2f} | 💰 Sinal: R$ {float(ev.get('valor_sinal', 0)):.2f} | Status: {ev.get('status', 'Confirmado')}")
+            st.info(f"📅 **{ev.get('data')}** | 👤 **Cliente:** {ev.get('cliente')} | 💵 Locação: R$ {float(ev.get('valor_locacao', 0)):.2f} | 💰 Sinal: R$ {float(ev.get('valor_sinal', 0)):.2f} | Status: {ev.get('status', 'Confirmado')}")
     else:
         st.write("Nenhum evento localizado para o filtro selecionado.")
 
 # ------------------------------------------
-# ABA 2: LISTA & GESTÃO (EDIÇÃO E ALTERAÇÕES - VERSÃO SEGURA)
+# ABA 2: LISTA & GESTÃO
 # ------------------------------------------
 with aba_gestao:
     st.header("📋 Gerenciar e Editar Reservas")
@@ -162,28 +170,68 @@ with aba_gestao:
     if not st.session_state["reservas"]:
         st.write("Nenhuma reserva cadastrada.")
     else:
-        # Garante que todo item tenha um ID temporário se não existir no JSON
-        for idx, e in enumerate(st.session_state["reservas"]):
-            if "id" not in e:
-                e["id"] = f"reg-{idx}"
-
-        # Opções para selecionar a reserva que deseja editar (uso de .get para evitar KeyError)
         lista_opcoes = {
-            f"{e.get('data', 'Sem data')} - {e.get('cliente', 'Cliente')} (ID: {e.get('id')})": e.get('id') 
+            f"{e.get('data', 'Sem Data')} - {e.get('cliente', 'Sem Nome')}": e.get("id") 
             for e in st.session_state["reservas"]
         }
-        reserva_selecionada_label = st.selectbox("Selecione uma reserva para editar:", list(lista_opcoes.keys()))
-        id_reserva_selecionada = lista_opcoes[reserva_selecionada_label]
         
-        # Localiza o objeto da reserva no estado
-        reserva_atual = next((e for e in st.session_state["reservas"] if e.get("id") == id_reserva_selecionada), None)
+        if lista_opcoes:
+            reserva_selecionada_label = st.selectbox("Selecione uma reserva para editar:", list(lista_opcoes.keys()))
+            id_reserva_selecionada = lista_opcoes[reserva_selecionada_label]
+            
+            reserva_atual = next((e for e in st.session_state["reservas"] if e.get("id") == id_reserva_selecionada), None)
+            
+            if reserva_atual:
+                try:
+                    dt_reserva = datetime.strptime(str(reserva_atual.get("data")), "%Y-%m-%d")
+                    ano_def, mes_def, dia_def = dt_reserva.year, dt_reserva.month, dt_reserva.day
+                except Exception:
+                    ano_def, mes_def, dia_def = 2026, 10, 1
+
+                with st.form("form_edicao_reserva"):
+                    st.subheader(f"Editando: {reserva_atual.get('cliente')}")
+                    
+                    cliente = st.text_input("Nome do Cliente", value=str(reserva_atual.get("cliente", "")))
+                    
+                    col_dia, col_mes, col_ano = st.columns(3)
+                    dia_ev = col_dia.number_input("Dia", min_value=1, max_value=31, value=dia_def)
+                    mes_ev = col_mes.number_input("Mês", min_value=1, max_value=12, value=mes_def)
+                    ano_ev = col_ano.number_input("Ano", min_value=2025, max_value=2030, value=ano_def)
+                    
+                    col_val1, col_val2 = st.columns(2)
+                    valor_locacao = col_val1.number_input("Valor da Locação (R$)", value=float(reserva_atual.get("valor_locacao", 0.0)), step=50.0)
+                    valor_sinal = col_val2.number_input("Valor do Sinal Pago (R$)", value=float(reserva_atual.get("valor_sinal", 0.0)), step=50.0)
+                    
+                    status_opcoes = ["Confirmado", "Pendente", "Cancelado"]
+                    idx_st = status_opcoes.index(reserva_atual.get("status")) if reserva_atual.get("status") in status_opcoes else 0
+                    status = st.selectbox("Status do Evento", status_opcoes, index=idx_st)
+                    
+                    submitted_edicao = st.form_submit_button("💾 Salvar Alterações na Nuvem")
+                    
+                    if submitted_edicao:
+                        if not cliente.strip():
+                            st.warning("⚠️ O nome do cliente é obrigatório.")
+                        else:
+                            data_formatada_str = f"{int(ano_ev)}-{int(mes_ev):02d}-{int(dia_ev):02d}"
+                            
+                            for evento in st.session_state["reservas"]:
+                                if evento.get("id") == id_reserva_selecionada:
+                                    evento["cliente"] = cliente.strip()
+                                    evento["data"] = data_formatada_str
+                                    evento["valor_locacao"] = float(valor_locacao)
+                                    evento["valor_sinal"] = float(valor_sinal)
+                                    evento["status"] = status
+                                    break
+
+                            if salvar_reservas_github(st.session_state["reservas"]):
+                                st.success("✅ Atualizado com sucesso!")
+                                st.rerun()
 
 # ------------------------------------------
-# ABA 3: NOVA LOCAÇÃO (CADASTRO)
+# ABA 3: NOVA LOCAÇÃO
 # ------------------------------------------
 with aba_novo:
     st.header("➕ Cadastrar Nova Locação")
-    
     import uuid
     
     with st.form("form_nova_reserva"):
@@ -206,13 +254,8 @@ with aba_novo:
             if not cliente_novo.strip():
                 st.warning("⚠️ O nome do cliente é obrigatório.")
             else:
-                try:
-                    data_nova_str = f"{int(ano_n)}-{int(mes_n):02d}-{int(dia_n):02d}"
-                    datetime.strptime(data_nova_str, "%Y-%m-%d")
-                except ValueError:
-                    st.error("⚠️ Data inválida. Verifique o dia e o mês selecionados.")
-                    st.stop()
-
+                data_nova_str = f"{int(ano_n)}-{int(mes_n):02d}-{int(dia_n):02d}"
+                
                 nova_reserva = {
                     "id": str(uuid.uuid4())[:8],
                     "cliente": cliente_novo.strip(),
@@ -225,5 +268,5 @@ with aba_novo:
                 st.session_state["reservas"].append(nova_reserva)
                 
                 if salvar_reservas_github(st.session_state["reservas"]):
-                    st.success("✅ Nova locação cadastrada e salva na nuvem!")
+                    st.success("✅ Cadastrado com sucesso!")
                     st.rerun()

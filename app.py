@@ -1,4 +1,4 @@
-import base64
+udo import base64
 from datetime import datetime
 import io
 import json
@@ -476,7 +476,117 @@ elif menu == "➕ Nova Locação":
 # ==========================================
 # 4. LISTA & GESTÃO
 # ==========================================
-if st.session_state.get(f"edit_mode_{ev_id}", False):
+# ==========================================
+# 4. LISTA & GESTÃO
+# ==========================================
+elif menu == "📋 Lista & Gestão":
+    st.title("📋 Gerenciamento de Locações")
+    st.markdown("Consulte, edite status, abra o WhatsApp direto ou gere o contrato em Word.")
+
+    if eventos_filtrados:
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            filtro_status_lst = st.selectbox("Filtrar por Status", ["Todos", "Confirmado", "Pendente", "Cancelado"])
+        with col_b2:
+            busca_texto = st.text_input("🔍 Buscar por Cliente", "")
+
+        lista_exibicao = eventos_filtrados
+        if filtro_status_lst != "Todos":
+            lista_exibicao = [e for e in lista_exibicao if e.get("status"] == filtro_status_lst]
+        if busca_texto.strip():
+            lista_exibicao = [e for e in lista_exibicao if busca_texto.lower() in e.get("cliente", "").lower()]
+
+        for ev in sorted(lista_exibicao, key=lambda x: x["date"]):
+            ev_id = ev.get("id")
+            st_ev = ev.get("status", "Pendente")
+            emoji = "✅" if st_ev == "Confirmado" else ("❌" if st_ev == "Cancelado" else "⏳")
+            data_formatada = formatar_data_br(ev.get("date"))
+
+            with st.container(border=True):
+                col_i1, col_i2 = st.columns([3, 1])
+                with col_i1:
+                    st.markdown(f"**{emoji} Data: {data_formatada} - {ev.get('cliente')}**")
+                    st.caption(f"Turno: **{ev.get('turno')}** | Evento: {ev.get('tipo_evento', 'Festividade')} | Qtdade de Pessoas: {ev.get('qtd_pessoas', 0)} | Status: **{st_ev}**")
+                    
+                    tel = ev.get("telefone", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+                    if tel:
+                        st.markdown(f"[💬 Abrir Conversa no WhatsApp](https://wa.me/55{tel})")
+                    
+                    v_loc = float(ev.get("valor_locacao", 0))
+                    v_sinal_cadastrado = float(ev.get("valor_sinal", 0))
+                    sinal_pago_status = "Pago ✅" if (v_sinal_cadastrado > 0 or ev.get("sinal_pago")) else "Pendente ⏳"
+                    
+                    barris = ev.get("barris", [])
+                    if not barris and ev.get("qtd_chopp"):
+                        barris = [{"estilo": ev.get("estilo_chopp", "Pilsen"), "litros": ev.get("qtd_chopp"), "valor_total": int(ev.get("qtd_chopp", 0)) * float(ev.get("preco_litro_chopp", 15.0))}]
+                    
+                    desc_barris = ", ".join([f"{b['litros']}L {b['estilo']} (R$ {float(b.get('valor_total', 0)):,.2f})" for b in barris]) if barris else "Nenhum chopp"
+                    v_chopp_total = sum(float(b.get("valor_total", 0)) for b in barris)
+
+                    st.text(f"Locação: R$ {v_loc:,.2f} | Sinal: R$ {v_sinal_cadastrado:,.2f} ({sinal_pago_status})")
+                    st.text(f"Som: {ev.get('som_sn', 'Não')} (R$ {float(ev.get('valor_som', 0)):,.2f}) | Retro: {ev.get('retro_sn', 'Não')} (R$ {float(ev.get('valor_retroprojetor', 0)):,.2f}) | Cuidador: {ev.get('cuidador_sn', 'Não')}")
+                    st.text(f"Refris: {ev.get('refri_sn','Não')} ({ev.get('refri_marca','-')}) | Água Gás: {ev.get('aguag_sn','Não')} ({ev.get('aguag_marca','-')}) | Água Sem Gás: {ev.get('aguas_sn','Não')} ({ev.get('aguas_marca','-')}) | Suco: {ev.get('suco_sn','Não')} ({ev.get('suco_marca','-')})")
+                    if ev.get('imp_desc'):
+                        st.text(f"Item Extra ({ev.get('imp_desc')}): {ev.get('imp_sn','Não')} | Marca: {ev.get('imp_marca','-')} | R$ {float(ev.get('imp_val',0)):,.2f}")
+                    st.text(f"Chopp: {desc_barris} | Total Chopp: R$ {v_chopp_total:,.2f}")
+
+                with col_i2:
+                    btn_edit = st.button("✏️ Editar", key=f"ed_{ev_id}", use_container_width=True)
+                    btn_contrato = st.button("📄 Contrato", key=f"ct_{ev_id}", use_container_width=True)
+                    btn_del = st.button("🗑️ Excluir", key=f"dl_{ev_id}", use_container_width=True)
+
+                if btn_del:
+                    reservas = [r for r in reservas if r.get("id") != ev_id]
+                    if salvar_dados_nuvem(reservas):
+                        st.success("Reserva excluída com sucesso!")
+                        st.rerun()
+
+                if btn_contrato:
+                    st.divider()
+                    st.markdown("### 📄 Geração de Contrato em Word (.docx)")
+                    
+                    texto_barris_contrato = "\n".join([f"- {b['litros']} litros de Chopp estilo {b['estilo']} - R$ {float(b.get('valor_total', 0)):,.2f}" for b in barris]) if barris else "Nenhum opcional de chopp."
+                    
+                    texto_op_parts = []
+                    if ev.get("som_sn") == "Sim":
+                        texto_op_parts.append(f"- Caixa de Som: R$ {float(ev.get('valor_som', 0)):,.2f}")
+                    if ev.get("retro_sn") == "Sim":
+                        texto_op_parts.append(f"- Retroprojetor: R$ {float(ev.get('valor_retroprojetor', 0)):,.2f}")
+                    if ev.get("cuidador_sn") == "Sim":
+                        texto_op_parts.append("- Monitor / Cuidador: Incluso")
+                    if float(ev.get("valor_taxa_adicional", 0)) > 0:
+                        texto_op_parts.append(f"- Taxa Adicional: R$ {float(ev.get('valor_taxa_adicional', 0)):,.2f}")
+                    if ev.get("refri_sn") == "Sim":
+                        texto_op_parts.append(f"- Refrigerantes em Consignação (Marca: {ev.get('refri_marca','-')}): R$ {float(ev.get('refri_val',0)):,.2f}")
+                    if ev.get("aguag_sn") == "Sim":
+                        texto_op_parts.append(f"- Água com Gás Barril (Marca: {ev.get('aguag_marca','-')}): R$ {float(ev.get('aguag_val',0)):,.2f}")
+                    if ev.get("aguas_sn") == "Sim":
+                        texto_op_parts.append(f"- Água Sem Gás Garrafa (Marca: {ev.get('aguas_marca','-')}): R$ {float(ev.get('aguas_val',0)):,.2f}")
+                    if ev.get("suco_sn") == "Sim":
+                        texto_op_parts.append(f"- Suco Lata (Marca: {ev.get('suco_marca','-')}): R$ {float(ev.get('suco_val',0)):,.2f}")
+                    if ev.get("imp_sn") == "Sim" and ev.get("imp_desc"):
+                        texto_op_parts.append(f"- Item Extra ({ev.get('imp_desc')} - Marca: {ev.get('imp_marca','-')}): R$ {float(ev.get('imp_val',0)):,.2f}")
+
+                    texto_opcionais_contrato = "\n".join(texto_op_parts) if texto_op_parts else "Nenhum opcional contratado."
+
+                    arquivo_docx = gerar_documento_word(ev, data_formatada, barris, texto_opcionais_contrato, texto_barris_contrato)
+                    
+                    if arquivo_docx:
+                        nome_arquivo_download = f"Contrato_{ev.get('cliente').replace(' ', '_')}.docx"
+                        st.download_button(
+                            label="📥 Baixar Contrato em Word Preenchido",
+                            data=arquivo_docx,
+                            file_name=nome_arquivo_download,
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            key=f"dl_docx_{ev_id}"
+                        )
+                    else:
+                        st.warning("⚠️ O arquivo `modelo_contrato.docx` não foi encontrado no GitHub. Certifique-se de enviá-lo para a raiz do repositório.")
+
+                if btn_edit:
+                    st.session_state[f"edit_mode_{ev_id}"] = not st.session_state.get(f"edit_mode_{ev_id}", False)
+
+                if st.session_state.get(f"edit_mode_{ev_id}", False):
                     st.divider()
                     st.markdown(f"**Editando Completo: {ev.get('cliente')}**")
                     
@@ -615,7 +725,6 @@ if st.session_state.get(f"edit_mode_{ev_id}", False):
                                 st.warning("⚠️ O nome do cliente é obrigatório.")
                             else:
                                 try:
-                                    # Monta a data formatada exata e atualiza a chave 'date'
                                     nova_data_str = f"{int(e_ano)}-{int(e_mes):02d}-{int(e_dia):02d}"
                                     datetime.strptime(nova_data_str, "%Y-%m-%d")
                                 except ValueError:
@@ -638,7 +747,7 @@ if st.session_state.get(f"edit_mode_{ev_id}", False):
                                         item["telefone"] = e_tel
                                         item["documento"] = e_doc
                                         item["tipo_evento"] = e_tipo_evento
-                                        item["date"] = nova_data_str  # <--- Atualização da nova data aqui!
+                                        item["date"] = nova_data_str
                                         item["turno"] = e_turno
                                         item["qtd_pessoas"] = int(e_qtd_pes)
                                         item["status"] = e_stat
@@ -675,7 +784,8 @@ if st.session_state.get(f"edit_mode_{ev_id}", False):
                                     st.session_state[f"edit_mode_{ev_id}"] = False
                                     st.success("✅ Alterações e data salvas com sucesso!")
                                     st.rerun()
-
+    else:
+        st.info("Nenhuma locação cadastrada para exibir.")
 
 # ==========================================
 # 5. CHECKLIST DO DIA

@@ -50,7 +50,7 @@ def salvar_reservas_github(reservas):
     content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
     
     payload = {
-        "message": "Atualização automática de reservas via App Koch",
+        "message": "Atualização de reservas via App Koch",
         "content": content_b64
     }
     
@@ -68,12 +68,12 @@ def salvar_reservas_github(reservas):
         return False
 
 # ==========================================
-# INICIALIZAÇÃO DE ESTADO E TRATAMENTO
+# INICIALIZAÇÃO E BLINDAGEM DE DADOS
 # ==========================================
 if "reservas" not in st.session_state or not st.session_state["reservas"]:
     st.session_state["reservas"] = carregar_reservas_github()
 
-# Garante IDs e campos padrão para evitar qualquer KeyError
+# Garante que nenhum registro antigo cause KeyError
 for idx, e in enumerate(st.session_state["reservas"]):
     if not isinstance(e, dict):
         continue
@@ -126,13 +126,14 @@ aba_dash, aba_gestao, aba_novo = st.tabs([
 ])
 
 # ------------------------------------------
-# ABA 1: DASHBOARD
+# ABA 1: DASHBOARD & MÉTRICAS
 # ------------------------------------------
 with aba_dash:
     st.header("📊 Resumo Financeiro e Eventos")
     
     total_eventos = len(eventos_filtrados)
     
+    # Soma automática dos sinais maiores que zero para eventos não cancelados
     sinais_recebidos = sum(
         float(e.get("valor_sinal", 0) or 0) 
         for e in eventos_filtrados 
@@ -162,7 +163,7 @@ with aba_dash:
         st.write("Nenhum evento localizado para o filtro selecionado.")
 
 # ------------------------------------------
-# ABA 2: LISTA & GESTÃO
+# ABA 2: LISTA & GESTÃO (EDIÇÃO)
 # ------------------------------------------
 with aba_gestao:
     st.header("📋 Gerenciar e Editar Reservas")
@@ -224,7 +225,7 @@ with aba_gestao:
                                     break
 
                             if salvar_reservas_github(st.session_state["reservas"]):
-                                st.success("✅ Atualizado com sucesso!")
+                                st.success("✅ Reserva e data atualizadas com sucesso!")
                                 st.rerun()
 
 # ------------------------------------------
@@ -268,5 +269,5 @@ with aba_novo:
                 st.session_state["reservas"].append(nova_reserva)
                 
                 if salvar_reservas_github(st.session_state["reservas"]):
-                    st.success("✅ Cadastrado com sucesso!")
+                    st.success("✅ Nova locação cadastrada com sucesso!")
                     st.rerun()

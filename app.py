@@ -154,7 +154,7 @@ with aba_dash:
         st.write("Nenhum evento localizado para o filtro selecionado.")
 
 # ------------------------------------------
-# ABA 2: LISTA & GESTÃO (EDIÇÃO E ALTERAÇÕES)
+# ABA 2: LISTA & GESTÃO (EDIÇÃO E ALTERAÇÕES - VERSÃO SEGURA)
 # ------------------------------------------
 with aba_gestao:
     st.header("📋 Gerenciar e Editar Reservas")
@@ -162,68 +162,21 @@ with aba_gestao:
     if not st.session_state["reservas"]:
         st.write("Nenhuma reserva cadastrada.")
     else:
-        # Opções para selecionar a reserva que deseja editar
-        lista_opcoes = {f"{e['data']} - {e['cliente']} (ID: {e['id']})": e['id'] for e in st.session_state["reservas"]}
+        # Garante que todo item tenha um ID temporário se não existir no JSON
+        for idx, e in enumerate(st.session_state["reservas"]):
+            if "id" not in e:
+                e["id"] = f"reg-{idx}"
+
+        # Opções para selecionar a reserva que deseja editar (uso de .get para evitar KeyError)
+        lista_opcoes = {
+            f"{e.get('data', 'Sem data')} - {e.get('cliente', 'Cliente')} (ID: {e.get('id')})": e.get('id') 
+            for e in st.session_state["reservas"]
+        }
         reserva_selecionada_label = st.selectbox("Selecione uma reserva para editar:", list(lista_opcoes.keys()))
         id_reserva_selecionada = lista_opcoes[reserva_selecionada_label]
         
         # Localiza o objeto da reserva no estado
-        reserva_atual = next((e for e in st.session_state["reservas"] if e["id"] == id_reserva_selecionada), None)
-        
-        if reserva_atual:
-            # Extrai ano, mês e dia atuais da reserva
-            try:
-                dt_reserva = datetime.strptime(reserva_atual["data"], "%Y-%m-%d")
-                ano_def, mes_def, dia_def = dt_reserva.year, dt_reserva.month, dt_reserva.day
-            except ValueError:
-                ano_def, mes_def, dia_def = 2026, 10, 1
-
-            with st.form("form_edicao_reserva"):
-                st.subheader(f"Editando: {reserva_atual['cliente']}")
-                
-                cliente = st.text_input("Nome do Cliente", value=reserva_atual.get("cliente", ""))
-                
-                col_dia, col_mes, col_ano = st.columns(3)
-                dia_ev = col_dia.number_input("Dia", min_value=1, max_value=31, value=dia_def)
-                mes_ev = col_mes.number_input("Mês", min_value=1, max_value=12, value=mes_def)
-                ano_ev = col_ano.number_input("Ano", min_value=2025, max_value=2030, value=ano_def)
-                
-                col_val1, col_val2 = st.columns(2)
-                valor_locacao = col_val1.number_input("Valor da Locação (R$)", value=float(reserva_atual.get("valor_locacao", 0.0)), step=50.0)
-                valor_sinal = col_val2.number_input("Valor do Sinal Pago (R$)", value=float(reserva_atual.get("valor_sinal", 0.0)), step=50.0)
-                
-                status_opcoes = ["Confirmado", "Pendente", "Cancelado"]
-                index_status = status_opcoes.index(reserva_atual.get("status", "Confirmado")) if reserva_atual.get("status") in status_opcoes else 0
-                status = st.selectbox("Status do Evento", status_opcoes, index=index_status)
-                
-                submitted_edicao = st.form_submit_button("💾 Salvar Alterações na Nuvem")
-                
-                if submitted_edicao:
-                    if not cliente.strip():
-                        st.warning("⚠️ O nome do cliente é obrigatório.")
-                    else:
-                        try:
-                            # Monta e valida a nova data formatada
-                            data_formatada_str = f"{int(ano_ev)}-{int(mes_ev):02d}-{int(dia_ev):02d}"
-                            datetime.strptime(data_formatada_str, "%Y-%m-%d")
-                        except ValueError:
-                            st.error("⚠️ Data inválida. Verifique o dia e o mês selecionados.")
-                            st.stop()
-
-                        # 1. Atualiza a reserva correspondente na lista
-                        for evento in st.session_state["reservas"]:
-                            if evento["id"] == id_reserva_selecionada:
-                                evento["cliente"] = cliente.strip()
-                                evento["data"] = data_formatada_str  # <--- Nova data salva corretamente!
-                                evento["valor_locacao"] = float(valor_locacao)
-                                evento["valor_sinal"] = float(valor_sinal)
-                                evento["status"] = status
-                                break
-
-                        # 2. Grava a lista atualizada no GitHub
-                        if salvar_reservas_github(st.session_state["reservas"]):
-                            st.success("✅ Reserva e data atualizadas com sucesso na nuvem!")
-                            st.rerun()  # Recarrega o app para exibir as alterações na hora
+        reserva_atual = next((e for e in st.session_state["reservas"] if e.get("id") == id_reserva_selecionada), None)
 
 # ------------------------------------------
 # ABA 3: NOVA LOCAÇÃO (CADASTRO)

@@ -492,7 +492,7 @@ elif menu == "📋 Lista & Gestão":
 
         lista_exibicao = eventos_filtrados
         if filtro_status_lst != "Todos":
-            lista_exibicao = [e for e in lista_exibicao if e.get("status"] == filtro_status_lst]
+            lista_exibicao = [e for e in lista_exibicao if e.get("status") == filtro_status_lst]
         if busca_texto.strip():
             lista_exibicao = [e for e in lista_exibicao if busca_texto.lower() in e.get("cliente", "").lower()]
 

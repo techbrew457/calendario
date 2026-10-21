@@ -120,7 +120,7 @@
         "valor_caucao": 200.0,
         "valor_som": 0.0,
         "valor_retroprojetor": 0.0,
-        "taxa_cuidador": false,
+        "taxa_cuidador": true,
         "valor_taxa_adicional": 0.0,
         "barris": [],
         "observacoes": ""

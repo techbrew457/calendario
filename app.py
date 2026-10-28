@@ -122,6 +122,22 @@ def gerar_documento_word(ev, data_formatada, barris, texto_opcionais_contrato, t
 
     doc = Document(caminho_modelo)
 
+    # Cálculo dos totais para o contrato
+    v_loc = float(ev.get('valor_locacao', 0) or 0)
+    v_som = float(ev.get('valor_som', 0) or 0) if ev.get('som_sn') == 'Sim' else 0
+    v_ret = float(ev.get('valor_retroprojetor', 0) or 0) if ev.get('retro_sn') == 'Sim' else 0
+    v_taxa = float(ev.get('valor_taxa_adicional', 0) or 0)
+    v_ref = float(ev.get('refri_val', 0) or 0) if ev.get('refri_sn') == 'Sim' else 0
+    v_ag = float(ev.get('aguag_val', 0) or 0) if ev.get('aguag_sn') == 'Sim' else 0
+    v_as = float(ev.get('aguas_val', 0) or 0) if ev.get('aguas_sn') == 'Sim' else 0
+    v_suc = float(ev.get('suco_val', 0) or 0) if ev.get('suco_sn') == 'Sim' else 0
+    v_imp = float(ev.get('imp_val', 0) or 0) if ev.get('imp_sn') == 'Sim' else 0
+    v_chopp = sum(float(b.get('valor_total', 0) or 0) for b in barris)
+    
+    total_geral = v_loc + v_som + v_ret + v_taxa + v_ref + v_ag + v_as + v_suc + v_imp + v_chopp
+    v_sinal = float(ev.get('valor_sinal', 0) or 0)
+    restante_pagar = total_geral - v_sinal
+
     contexto = {
         "{{cliente}}": str(ev.get("cliente", "")),
         "{{documento}}": str(ev.get("documento", "Não informado")),
@@ -130,10 +146,12 @@ def gerar_documento_word(ev, data_formatada, barris, texto_opcionais_contrato, t
         "{{turno}}": str(ev.get("turno", "")),
         "{{qtd_pessoas}}": str(ev.get("qtd_pessoas", 0)),
         "{{tipo_evento}}": str(ev.get("tipo_evento", "Festividade")),
-        "{{valor_locacao}}": f"R$ {float(ev.get('valor_locacao', 0)):,.2f}",
-        "{{valor_sinal}}": f"R$ {float(ev.get('valor_sinal', 0)):,.2f}",
-        "{{status_sinal}}": "Pago" if (float(ev.get("valor_sinal", 0) or 0) > 0 or ev.get("sinal_pago")) else "Pendente",
-        "{{valor_caucao}}": f"R$ {float(ev.get('valor_caucao', 0)):,.2f}",
+        "{{valor_locacao}}": f"R$ {v_loc:,.2f}",
+        "{{valor_sinal}}": f"R$ {v_sinal:,.2f}",
+        "{{status_sinal}}": "Pago" if (v_sinal > 0 or ev.get("sinal_pago")) else "Pendente",
+        "{{valor_caucao}}": f"R$ {float(ev.get('valor_caucao', 0) or 0):,.2f}",
+        "{{valor_total}}": f"R$ {total_geral:,.2f}",
+        "{{restante_pagar}}": f"R$ {restante_pagar:,.2f}",
         "{{opcionais}}": texto_opcionais_contrato,
         "{{chopps}}": texto_barris_contrato,
         "{{observacoes}}": str(ev.get("observacoes", "Nenhuma observação específica registrada."))
@@ -204,7 +222,7 @@ if menu == "📊 Dashboard & Métricas":
     confirmados = sum(1 for e in eventos_filtrados if e.get("status") == "Confirmado")
     pendentes = sum(1 for e in eventos_filtrados if e.get("status") == "Pendente")
     
-    faturamento_projetado = sum(float(e.get("valor_locacao", 0) or 0) for e in eventos_filtrados if e.get("status") != "Cancelado")
+    faturamento_projetado = sum(float(e.get("valor_locacao", 0) or 0) for e in eventos_filtrados if e.get("status"] != "Cancelado")
     
     sinais_recebidos = sum(
         float(e.get("valor_sinal", 0) or 0) 
@@ -374,14 +392,13 @@ elif menu == "➕ Nova Locação":
         st.divider()
         st.subheader("🍺 Gestão de Múltiplos Barris de Chopp Koch (Opções: 30L ou 50L)")
         
-        # Opções restritas a 30L e 50L
         opt_litros_cad = [0, 50, 30]
 
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             st.markdown("##### 🛢️ Barril 1")
             estilo_1 = st.selectbox("Estilo 1", ["Nenhum"] + ESTILOS_CHOPP, key="e1")
-            litros_1 = st.selectbox("Tamanho 1 (Litros)", opt_litros_cad, index=1, key="t1") # Padrão 50L
+            litros_1 = st.selectbox("Tamanho 1 (Litros)", opt_litros_cad, index=1, key="t1")
             valor_b1 = st.number_input("Valor do Barril 1 (R$)", min_value=0.0, value=300.0, step=10.0, format="%.2f", key="vb1")
 
             st.markdown("##### 🛢️ Barril 3")
@@ -416,7 +433,7 @@ elif menu == "➕ Nova Locação":
         with col_v1:
             valor_locacao = st.number_input("Valor da Locação (R$)", min_value=0.0, value=1000.0, step=50.0, format="%.2f")
         with col_v2:
-            valor_sinal = st.number_input("Valor do Sinal (R$)", min_value=0.0, value=500.0, step=50.0, format="%.2f")
+            valor_sinal = st.number_input("Valor do Sinal / Pago (R$)", min_value=0.0, value=500.0, step=50.0, format="%.2f")
         with col_v3:
             valor_caucao = st.number_input("Valor Caução (R$)", min_value=0.0, value=200.0, step=50.0, format="%.2f")
 
@@ -524,20 +541,29 @@ elif menu == "📋 Lista & Gestão":
                     if tel:
                         st.markdown(f"[💬 Abrir Conversa no WhatsApp](https://wa.me/55{tel})")
                     
+                    # Cálculos financeiros detalhados por evento
                     v_loc = float(ev.get("valor_locacao", 0) or 0)
-                    v_sinal_cadastrado = float(ev.get("valor_sinal", 0) or 0)
-                    sinal_pago_status = "Pago ✅" if (v_sinal_cadastrado > 0 or ev.get("sinal_pago")) else "Pendente ⏳"
+                    v_som = float(ev.get("valor_som", 0) or 0) if ev.get("som_sn") == "Sim" else 0
+                    v_ret = float(ev.get("valor_retroprojetor", 0) or 0) if ev.get("retro_sn") == "Sim" else 0
+                    v_taxa = float(ev.get("valor_taxa_adicional", 0) or 0)
+                    v_ref = float(ev.get("refri_val", 0) or 0) if ev.get("refri_sn") == "Sim" else 0
+                    v_ag = float(ev.get("aguag_val", 0) or 0) if ev.get("aguag_sn") == "Sim" else 0
+                    v_as = float(ev.get("aguas_val", 0) or 0) if ev.get("aguas_sn") == "Sim" else 0
+                    v_suc = float(ev.get("suco_val", 0) or 0) if ev.get("suco_sn") == "Sim" else 0
+                    v_imp = float(ev.get("imp_val", 0) or 0) if ev.get("imp_sn") == "Sim" else 0
                     
                     barris = ev.get("barris", [])
-                    desc_barris = ", ".join([f"{b['litros']}L {b['estilo']} (R$ {float(b.get('valor_total', 0) or 0):,.2f})" for b in barris]) if barris else "Nenhum chopp"
                     v_chopp_total = sum(float(b.get("valor_total", 0) or 0) for b in barris)
+                    
+                    total_venda = v_loc + v_som + v_ret + v_taxa + v_ref + v_ag + v_as + v_suc + v_imp + v_chopp_total
+                    v_sinal_cadastrado = float(ev.get("valor_sinal", 0) or 0)
+                    restante_a_pagar = total_venda - v_sinal_cadastrado
+                    
+                    desc_barris = ", ".join([f"{b['litros']}L {b['estilo']} (R$ {float(b.get('valor_total', 0) or 0):,.2f})" for b in barris]) if barris else "Nenhum chopp"
 
-                    st.text(f"Locação: R$ {v_loc:,.2f} | Sinal: R$ {v_sinal_cadastrado:,.2f} ({sinal_pago_status})")
-                    st.text(f"Som: {ev.get('som_sn', 'Não')} (R$ {float(ev.get('valor_som', 0) or 0):,.2f}) | Retro: {ev.get('retro_sn', 'Não')} (R$ {float(ev.get('valor_retroprojetor', 0) or 0):,.2f}) | Cuidador: {ev.get('cuidador_sn', 'Não')}")
-                    st.text(f"Refris: {ev.get('refri_sn','Não')} ({ev.get('refri_marca','-')}) | Água Gás: {ev.get('aguag_sn','Não')} ({ev.get('aguag_marca','-')}) | Água Sem Gás: {ev.get('aguas_sn','Não')} ({ev.get('aguas_marca','-')}) | Suco: {ev.get('suco_sn','Não')} ({ev.get('suco_marca','-')})")
-                    if ev.get('imp_desc'):
-                        st.text(f"Item Extra ({ev.get('imp_desc')}): {ev.get('imp_sn','Não')} | Marca: {ev.get('imp_marca','-')} | R$ {float(ev.get('imp_val',0) or 0):,.2f}")
-                    st.text(f"Chopp: {desc_barris} | Total Chopp: R$ {v_chopp_total:,.2f}")
+                    st.markdown(f"💰 **Total da Venda:** R$ {total_venda:,.2f} | 💵 **Já Pago (Sinal):** R$ {v_sinal_cadastrado:,.2f} | 🔴 **Falta Pagar:** **R$ {restante_a_pagar:,.2f}**")
+                    st.text(f"Locação: R$ {v_loc:,.2f} | Som: R$ {v_som:,.2f} | Chopp: R$ {v_chopp_total:,.2f}")
+                    st.text(f"Barris: {desc_barris}")
                     if ev.get('chopp_cons_sn') == "Sim":
                         st.text(f"🔄 Chopp Consignado: {ev.get('chopp_cons_litros')}L de {ev.get('chopp_cons_estilo')}")
 
@@ -642,7 +668,7 @@ elif menu == "📋 Lista & Gestão":
                         with col_ev1:
                             e_vloc = st.number_input("Valor Locação (R$)", value=float(ev.get("valor_locacao", 0) or 0), step=50.0, key=f"vl_{ev_id}")
                         with col_ev2:
-                            e_vsinal = st.number_input("Valor do Sinal (R$)", value=float(ev.get("valor_sinal", 0) or 0), step=50.0, key=f"vs_{ev_id}")
+                            e_vsinal = st.number_input("Valor do Sinal / Pago (R$)", value=float(ev.get("valor_sinal", 0) or 0), step=50.0, key=f"vs_{ev_id}")
                         with col_ev3:
                             e_vcaucao = st.number_input("Valor Caução (R$)", value=float(ev.get("valor_caucao", 0) or 0), step=50.0, key=f"vc_{ev_id}")
 
@@ -790,6 +816,7 @@ elif menu == "📋 Lista & Gestão":
                                         item["refri_sn"] = e_refri_sn
                                         item["refri_marca"] = e_refri_marca
                                         item["refri_val"] = float(e_refri_val)
+                                        item["agug_sn"] = aguag_sn  # mantem compatibilidade
                                         item["aguag_sn"] = e_aguag_sn
                                         item["aguag_marca"] = e_aguag_marca
                                         item["aguag_val"] = float(e_aguag_val)

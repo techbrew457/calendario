@@ -222,7 +222,7 @@ if menu == "📊 Dashboard & Métricas":
     confirmados = sum(1 for e in eventos_filtrados if e.get("status") == "Confirmado")
     pendentes = sum(1 for e in eventos_filtrados if e.get("status") == "Pendente")
     
-    faturamento_projetado = sum(float(e.get("valor_locacao", 0) or 0) for e in eventos_filtrados if e.get("status"] != "Cancelado")
+    faturamento_projetado = sum(float(e.get("valor_locacao", 0) or 0) for e in eventos_filtrados if e.get("status") != "Cancelado")
     
     sinais_recebidos = sum(
         float(e.get("valor_sinal", 0) or 0) 
